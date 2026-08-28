@@ -1,0 +1,9 @@
+app:
+  seed:
+    enabled: false
+  cors:
+    # Production trusts only what CORS_ALLOWED_ORIGINS names.
+    allow-local-dev-origins: false
+logging:
+  level:
+    in.hundredmph.api: INFO

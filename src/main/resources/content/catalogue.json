@@ -1,0 +1,520 @@
+{
+  "programs": [
+    {
+      "id": "prog_lower_back",
+      "name": "Lower Back",
+      "slug": "lower_back",
+      "tagline": "Rebuild strength and end back pain.",
+      "icon": "body-outline",
+      "created_at": "2026-08-01T00:00:00Z"
+    },
+    {
+      "id": "prog_shoulder",
+      "name": "Shoulder",
+      "slug": "shoulder",
+      "tagline": "Restore pain-free overhead motion.",
+      "icon": "barbell-outline",
+      "created_at": "2026-08-01T00:00:00Z"
+    },
+    {
+      "id": "prog_knee",
+      "name": "Knee",
+      "slug": "knee",
+      "tagline": "Bulletproof knees for daily life.",
+      "icon": "walk-outline",
+      "created_at": "2026-08-01T00:00:00Z"
+    },
+    {
+      "id": "prog_fitness",
+      "name": "General Fitness",
+      "slug": "general_fitness",
+      "tagline": "Build a strong, resilient body.",
+      "icon": "fitness-outline",
+      "created_at": "2026-08-01T00:00:00Z"
+    }
+  ],
+  "learn_topics": [
+    {
+      "id": "topic_videos",
+      "title": "Videos",
+      "subtitle": "Guided lessons",
+      "icon": "play-circle-outline"
+    },
+    {
+      "id": "topic_anatomy",
+      "title": "Anatomy",
+      "subtitle": "How your body works",
+      "icon": "body-outline"
+    },
+    {
+      "id": "topic_articles",
+      "title": "Articles",
+      "subtitle": "Read the science",
+      "icon": "document-text-outline"
+    },
+    {
+      "id": "topic_faq",
+      "title": "FAQs",
+      "subtitle": "Common questions",
+      "icon": "help-circle-outline"
+    }
+  ],
+  "session_types": [
+    {
+      "id": "st_flow",
+      "program_id": "prog_lower_back",
+      "name": "Flow",
+      "description": "Your main session — the core strength work that rebuilds your back.",
+      "icon": "flame",
+      "is_primary": true,
+      "frequency_per_week": 3,
+      "approx_duration_min": 60
+    },
+    {
+      "id": "st_mobility",
+      "program_id": "prog_lower_back",
+      "name": "Mobility Flow",
+      "description": "The supporting session — gentle work that keeps you moving between Flow days.",
+      "icon": "droplet",
+      "is_primary": false,
+      "frequency_per_week": 2,
+      "approx_duration_min": 30
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex_back_extension",
+      "program_id": "prog_lower_back",
+      "name": "Back Extension",
+      "focus": "Spinal erectors",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Set up face down with your hips on the pad and your feet locked in. Start with your torso hanging down, then lift until your body forms one straight line from head to heel. Hold there without arching past neutral, and lower slowly.",
+      "purpose": "This is the central exercise of the program. It loads the muscles that hold your spine upright through their full range, which is what raises the tolerance of the tissue that has been letting you down."
+    },
+    {
+      "id": "ex_hip_hinge",
+      "program_id": "prog_lower_back",
+      "name": "Hip Hinge",
+      "focus": "Hamstrings and glutes",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Stand with soft knees and push your hips straight back, letting your torso tip forward while your spine stays long. Go as far as your hamstrings allow without rounding, then drive your hips forward to stand tall.",
+      "purpose": "Teaches your hips to do the bending your lower back has been doing for you. Every heavy thing you pick up for the rest of your life should start with this pattern."
+    },
+    {
+      "id": "ex_bird_dog",
+      "program_id": "prog_lower_back",
+      "name": "Bird Dog",
+      "focus": "Trunk control",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "On hands and knees, reach one arm forward and the opposite leg back until both are level with your torso. Keep your hips square to the floor — if they tip, you have gone too far. Return under control and switch sides.",
+      "purpose": "Trains your trunk to stay still while your limbs move, which is the job it actually has to do when you walk, carry and reach."
+    },
+    {
+      "id": "ex_dead_bug",
+      "program_id": "prog_lower_back",
+      "name": "Dead Bug",
+      "focus": "Deep core",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Lie on your back with arms up and knees over hips. Press your lower back gently into the floor and lower one arm and the opposite leg until they hover. Bring them back and swap. Stop the set the moment your back lifts off the floor.",
+      "purpose": "Builds control of the position your spine is safest in, with no load on the back itself. It is the least intimidating way to start earning back trust in your midsection."
+    },
+    {
+      "id": "ex_split_squat",
+      "program_id": "prog_lower_back",
+      "name": "Split Squat",
+      "focus": "Single leg strength",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "Comfortable with the hip hinge",
+      "instructions": "Take a long stride, keep your torso tall and drop your back knee straight down towards the floor. Push through the front foot to stand. Keep the weight even rather than shifting onto the front leg.",
+      "purpose": "Most back pain comes with one leg quietly doing less work. Loading each side on its own finds that gap and closes it."
+    },
+    {
+      "id": "ex_suitcase_carry",
+      "program_id": "prog_lower_back",
+      "name": "Suitcase Carry",
+      "focus": "Anti-side-bend",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Hold a single weight in one hand and walk. Stand tall, shoulders level, and resist the pull to lean. Walk the distance, swap hands, repeat.",
+      "purpose": "Loads your trunk in the exact way daily life does — one bag, one side, walking. Carrying is rehab that looks like an ordinary errand."
+    },
+    {
+      "id": "ex_reverse_hyper",
+      "program_id": "prog_lower_back",
+      "name": "Reverse Hyper",
+      "focus": "Posterior chain",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "Back Extension iso holds",
+      "instructions": "Lie face down with your hips at the edge of a bench and your legs hanging. Squeeze your glutes to raise your legs to body height, pause, and lower with control rather than letting them swing.",
+      "purpose": "Works the back of the hips and the base of the spine through range with very little compression, which makes it a useful finisher on days your back feels sensitive."
+    },
+    {
+      "id": "ex_couch_stretch",
+      "program_id": "prog_lower_back",
+      "name": "Couch Stretch",
+      "focus": "Hip flexors and quads",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Kneel with your back shin against a wall or couch and your front foot planted. Slowly lift your torso upright until you feel a stretch down the front of the back hip and thigh. Keep your ribs down — do not let your lower back arch to escape it.",
+      "purpose": "Hours of sitting leave the front of the hip short, and a short hip flexor drags the lower back into an arch all day. Giving that tissue length takes the pull off your spine."
+    },
+    {
+      "id": "ex_hip_switch",
+      "program_id": "prog_lower_back",
+      "name": "90/90 Hip Switch",
+      "focus": "Hip rotation",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Sit with both knees bent at right angles, one leg in front and one out to the side. Keeping your chest tall, rotate both knees across to the other side and settle into the new position before switching back.",
+      "purpose": "Hips that cannot rotate make the lower back do the twisting instead. This gives the rotation back to the joint built for it."
+    },
+    {
+      "id": "ex_cat_cow",
+      "program_id": "prog_lower_back",
+      "name": "Cat Cow",
+      "focus": "Segmental spine",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "On hands and knees, round your spine towards the ceiling one segment at a time, then reverse into a gentle arch. Move slowly enough that you can feel each part of your back take its turn.",
+      "purpose": "Backs that hurt tend to move as one stiff block. Moving through range without load reminds the spine it is allowed to bend."
+    },
+    {
+      "id": "ex_deep_squat",
+      "program_id": "prog_lower_back",
+      "name": "Deep Squat Hold",
+      "focus": "Hips, ankles, adductors",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Drop into the deepest squat you can hold with your heels down, and let your elbows rest inside your knees. Hold the position and breathe. Hold a doorframe for support if your heels lift.",
+      "purpose": "The resting position most of us have lost. Time spent down here opens the hips and ankles that your back has been compensating for."
+    },
+    {
+      "id": "ex_thoracic_opener",
+      "program_id": "prog_lower_back",
+      "name": "Thoracic Opener",
+      "focus": "Upper back rotation",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Lie on your side with knees stacked and bent. Open the top arm across your body towards the floor behind you, following your hand with your eyes, and let your upper back rotate while your knees stay put.",
+      "purpose": "When the upper back will not rotate, the lower back rotates for it. Restoring motion higher up removes a load your spine was never meant to carry."
+    },
+    {
+      "id": "ex_hamstring_floss",
+      "program_id": "prog_lower_back",
+      "name": "Hamstring Floss",
+      "focus": "Hamstrings and sciatic glide",
+      "video_url": null,
+      "thumbnail_url": null,
+      "prerequisites": "None",
+      "instructions": "Lie on your back with one knee bent towards your chest. Straighten the knee until you feel tension behind the thigh, then bend it again. Keep it moving rather than holding the stretch.",
+      "purpose": "Gentle movement rather than a held stretch, which is what irritated nerve tissue responds to best. Useful on the days sitting has made everything feel tight."
+    }
+  ],
+  "session_exercises": [
+    {
+      "id": "se_flow_1",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_back_extension",
+      "sort_order": 1,
+      "prescription": "3 x 2m holds"
+    },
+    {
+      "id": "se_flow_2",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_hip_hinge",
+      "sort_order": 2,
+      "prescription": "3 x 10 reps"
+    },
+    {
+      "id": "se_flow_3",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_bird_dog",
+      "sort_order": 3,
+      "prescription": "3 x 8 reps · Both sides"
+    },
+    {
+      "id": "se_flow_4",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_dead_bug",
+      "sort_order": 4,
+      "prescription": "3 x 10 reps"
+    },
+    {
+      "id": "se_flow_5",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_split_squat",
+      "sort_order": 5,
+      "prescription": "3 x 8 reps · Both sides"
+    },
+    {
+      "id": "se_flow_6",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_suitcase_carry",
+      "sort_order": 6,
+      "prescription": "3 x 30m · Both sides"
+    },
+    {
+      "id": "se_flow_7",
+      "session_type_id": "st_flow",
+      "exercise_id": "ex_reverse_hyper",
+      "sort_order": 7,
+      "prescription": "2 x 12 reps"
+    },
+    {
+      "id": "se_mob_1",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_couch_stretch",
+      "sort_order": 1,
+      "prescription": "2 x 1m holds · Both sides"
+    },
+    {
+      "id": "se_mob_2",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_hip_switch",
+      "sort_order": 2,
+      "prescription": "2 x 10 reps"
+    },
+    {
+      "id": "se_mob_3",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_cat_cow",
+      "sort_order": 3,
+      "prescription": "2 x 10 reps"
+    },
+    {
+      "id": "se_mob_4",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_deep_squat",
+      "sort_order": 4,
+      "prescription": "2 x 2m holds"
+    },
+    {
+      "id": "se_mob_5",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_thoracic_opener",
+      "sort_order": 5,
+      "prescription": "2 x 1m · Both sides"
+    },
+    {
+      "id": "se_mob_6",
+      "session_type_id": "st_mobility",
+      "exercise_id": "ex_hamstring_floss",
+      "sort_order": 6,
+      "prescription": "2 x 12 reps · Both sides"
+    }
+  ],
+  "signature_exercises": [
+    {
+      "id": "sig_back_ext",
+      "program_id": "prog_lower_back",
+      "name": "Back Extension",
+      "description": "The central exercise of the Long Game.",
+      "is_central": true
+    }
+  ],
+  "progression_levels": [
+    {
+      "id": "pl_iso",
+      "signature_exercise_id": "sig_back_ext",
+      "name": "Iso Holds",
+      "level": 1,
+      "goal_label": "1 × 2m hold",
+      "metric": "time"
+    },
+    {
+      "id": "pl_sl_iso",
+      "signature_exercise_id": "sig_back_ext",
+      "name": "Single Leg Iso Holds",
+      "level": 2,
+      "goal_label": "1 × 1m hold · Both sides",
+      "metric": "time"
+    },
+    {
+      "id": "pl_reps",
+      "signature_exercise_id": "sig_back_ext",
+      "name": "Reps",
+      "level": 3,
+      "goal_label": "1 × 30 reps",
+      "metric": "reps"
+    },
+    {
+      "id": "pl_sl_reps",
+      "signature_exercise_id": "sig_back_ext",
+      "name": "Single Leg Reps",
+      "level": 4,
+      "goal_label": "1 × 20 reps · Both sides",
+      "metric": "reps"
+    },
+    {
+      "id": "pl_weighted",
+      "signature_exercise_id": "sig_back_ext",
+      "name": "Weighted Reps",
+      "level": 5,
+      "goal_label": "1 × 10 reps",
+      "metric": "reps"
+    }
+  ],
+  "learn_content": [
+    {
+      "id": "lc_tolerance",
+      "program_id": "prog_lower_back",
+      "kind": "mini_lesson",
+      "title": "Tissue Tolerance",
+      "subtitle": "Why backs give out on ordinary days",
+      "description": "Your back did not fail because of the thing you were lifting. It failed because the amount your tissue could take had quietly dropped below what an ordinary day asks of it. Raise the ceiling and ordinary days stop being a risk.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 20,
+      "sort_order": 1
+    },
+    {
+      "id": "lc_mentality",
+      "program_id": "prog_lower_back",
+      "kind": "mini_lesson",
+      "title": "Your Mentality",
+      "subtitle": "This is a long game",
+      "description": "The people who get their backs back are not the ones who train hardest. They are the ones still training in month four. Consistency beats intensity every time here.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 18,
+      "sort_order": 2
+    },
+    {
+      "id": "lc_hurt_harm",
+      "program_id": "prog_lower_back",
+      "kind": "mini_lesson",
+      "title": "Hurt Is Not Harm",
+      "subtitle": "Pain does not always mean damage",
+      "description": "Pain is your nervous system asking for attention, not a readout of tissue damage. Learning to tell the difference is what lets you keep loading a back that still complains.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 17,
+      "sort_order": 3
+    },
+    {
+      "id": "lc_rest_trap",
+      "program_id": "prog_lower_back",
+      "kind": "mini_lesson",
+      "title": "The Rest Trap",
+      "subtitle": "Why lying still makes it worse",
+      "description": "Rest feels like the safe choice and it works for about two days. After that it lowers your tolerance further, which is why the next flare-up arrives sooner and hits harder.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 19,
+      "sort_order": 4
+    },
+    {
+      "id": "lc_hinge",
+      "program_id": "prog_lower_back",
+      "kind": "mini_lesson",
+      "title": "The Hinge",
+      "subtitle": "One pattern that protects your spine",
+      "description": "Every heavy thing you pick up for the rest of your life should start at the hips, not the lower back. Twenty seconds on the pattern that makes that automatic.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 20,
+      "sort_order": 5
+    },
+    {
+      "id": "lc_normal_again",
+      "program_id": "prog_lower_back",
+      "kind": "longform",
+      "title": "Will I Ever Get My Back To Normal?",
+      "subtitle": "The honest answer, and what normal actually means",
+      "description": "The question everyone asks first, answered without the hedging. We go through what recovery actually looks like, why \"normal\" is the wrong target, and what the realistic ceiling is for a back that has been painful for months or years. Most people aim at the wrong thing and conclude they have failed when they have not.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 760,
+      "sort_order": 1
+    },
+    {
+      "id": "lc_my_injury",
+      "program_id": "prog_lower_back",
+      "kind": "longform",
+      "title": "Will This Work For My Injury?",
+      "subtitle": "Understand the real problem before the real solution",
+      "description": "Disc bulge, sciatica, facet joint, \"wear and tear\" — the labels matter far less than you have been led to believe. This walks through what an MRI does and does not tell you, and why the same programme works across diagnoses that sound completely different.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 555,
+      "sort_order": 2
+    },
+    {
+      "id": "lc_tolerance_depth",
+      "program_id": "prog_lower_back",
+      "kind": "longform",
+      "title": "Tissue Tolerance, In Depth",
+      "subtitle": "The science behind loading a back that hurts",
+      "description": "The full version of the mini lesson. What tolerance is physiologically, how load builds it, why the dose has to climb, and how to read the difference between soreness that is progress and pain that means back off.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 900,
+      "sort_order": 3
+    },
+    {
+      "id": "lc_desk_hours",
+      "program_id": "prog_lower_back",
+      "kind": "longform",
+      "title": "Sitting, Driving And Desk Work",
+      "subtitle": "Managing the hours that undo your session",
+      "description": "You train for an hour and sit for nine. This covers what long sitting actually does to the hips and lower back, which fixes are worth the effort, and which ergonomic advice is expensive noise.",
+      "thumbnail_url": null,
+      "video_url": null,
+      "duration_sec": 690,
+      "sort_order": 4
+    }
+  ],
+  "default_schedule": [
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "monday",
+      "session_type_id": "st_flow"
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "tuesday",
+      "session_type_id": "st_mobility"
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "wednesday",
+      "session_type_id": "st_flow"
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "thursday",
+      "session_type_id": "st_mobility"
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "friday",
+      "session_type_id": "st_flow"
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "saturday",
+      "session_type_id": null
+    },
+    {
+      "program_id": "prog_lower_back",
+      "day_of_week": "sunday",
+      "session_type_id": null
+    }
+  ]
+}

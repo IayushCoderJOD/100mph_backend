@@ -1,0 +1,11 @@
+# Tests run against a throwaway database so a local dev dataset is never touched.
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_TEST_URI:mongodb://localhost:27017/hundredmph_test}
+
+app:
+  jwt:
+    secret: test-only-secret-that-is-long-enough-0123456789
+  seed:
+    enabled: true
