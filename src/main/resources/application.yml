@@ -14,7 +14,10 @@ spring:
       fail-on-unknown-properties: false
 
 server:
-  port: ${PORT:8080}
+  # 8080 is Spring's default but it is not free on the dev machines here — a
+  # Keycloak container for an unrelated project publishes it. 8090 is ours;
+  # override with PORT for anything else.
+  port: ${PORT:8090}
   error:
     whitelabel:
       enabled: false

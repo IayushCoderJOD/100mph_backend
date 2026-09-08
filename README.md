@@ -20,7 +20,10 @@ export JWT_SECRET="$(openssl rand -base64 48)"
 ./mvnw spring-boot:run        # or: mvn spring-boot:run
 ```
 
-Then `curl localhost:8080/v1/health`.
+Then `curl localhost:8090/v1/health`.
+
+The port is 8090, not Spring's usual 8080, because 8080 is already taken
+on these machines by a Keycloak container. Set `PORT` to move it.
 
 On an empty database the seeder writes the programs, plans and demo accounts
 from the app's `src/data/mock.ts`, so `mock.demoLogins` works unchanged:
