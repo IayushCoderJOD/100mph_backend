@@ -5,7 +5,7 @@ import in.hundredmph.api.checkin.dto.CheckInResponse;
 import in.hundredmph.api.checkin.dto.CheckInSummaryResponse;
 import in.hundredmph.api.me.dto.UserDto;
 import in.hundredmph.api.progression.dto.ProgressionResponse;
-import in.hundredmph.api.schedule.dto.ScheduleResponse;
+import in.hundredmph.api.plan.dto.WeeklyPlanResponse;
 import in.hundredmph.api.session.dto.SessionLogResponse;
 import java.util.List;
 
@@ -16,7 +16,7 @@ import java.util.List;
  */
 public record ClientDetailResponse(
         UserDto user,
-        ScheduleResponse schedule,
+        WeeklyPlanResponse plan,
         List<SessionLogResponse> recentSessions,
         List<CheckInResponse> recentCheckIns,
         CheckInSummaryResponse summary,

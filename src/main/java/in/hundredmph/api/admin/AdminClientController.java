@@ -5,6 +5,9 @@ import in.hundredmph.api.admin.dto.ClientSummaryResponse;
 import in.hundredmph.api.assignment.AssignmentService;
 import in.hundredmph.api.assignment.dto.AssignExerciseRequest;
 import in.hundredmph.api.assignment.dto.AssignedExerciseResponse;
+import in.hundredmph.api.plan.PlanService;
+import in.hundredmph.api.plan.dto.UpdatePlanRequest;
+import in.hundredmph.api.plan.dto.WeeklyPlanResponse;
 import in.hundredmph.api.progression.ProgressionService;
 import in.hundredmph.api.progression.dto.ProgressionResponse;
 import in.hundredmph.api.progression.dto.SetProgressionRequest;
@@ -35,13 +38,16 @@ public class AdminClientController {
     private final AdminClientService clients;
     private final AssignmentService assignments;
     private final ProgressionService progressions;
+    private final PlanService plans;
 
     public AdminClientController(AdminClientService clients,
                                  AssignmentService assignments,
-                                 ProgressionService progressions) {
+                                 ProgressionService progressions,
+                                 PlanService plans) {
         this.clients = clients;
         this.assignments = assignments;
         this.progressions = progressions;
+        this.plans = plans;
     }
 
     /** The roster with adherence and latest pain — backs the Clients tab. */
@@ -75,6 +81,20 @@ public class AdminClientController {
                                           @PathVariable String assignmentId) {
         assignments.withdraw(assignmentId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** The client's week as their physio wrote it — every day, rest days empty. */
+    @GetMapping("/{userId}/plan")
+    public WeeklyPlanResponse plan(@PathVariable String userId) {
+        return plans.forUser(userId);
+    }
+
+    /** Writes the whole week. The writing coach is taken from the token. */
+    @PutMapping("/{userId}/plan")
+    public WeeklyPlanResponse replacePlan(@AuthenticationPrincipal AuthPrincipal principal,
+                                          @PathVariable String userId,
+                                          @Valid @RequestBody UpdatePlanRequest request) {
+        return plans.replace(userId, principal.userId(), request);
     }
 
     /** A coach override of where a client sits on a ladder. */

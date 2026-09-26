@@ -36,6 +36,22 @@ from the app's `src/data/mock.ts`, so `mock.demoLogins` works unchanged:
 Set `SEED_ENABLED=false` before any real data exists. See `.env.example` for
 every knob.
 
+## Deploy
+
+Production runs the `prod` profile. Set, at minimum:
+
+| Variable | Why |
+|---|---|
+| `SPRING_PROFILES_ACTIVE=prod` | Seeding off, CORS locked to the list below, INFO logging |
+| `JWT_SECRET` | 32+ bytes (`openssl rand -base64 48`). The prod profile has no fallback |
+| `MONGODB_URI` | Atlas, Mumbai region |
+| `CORS_ALLOWED_ORIGINS` | The web app's origin(s), e.g. `https://app.100mph.in`. Phone apps need none |
+| `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | Creates the first admin on an empty database (12+ characters). Existing accounts are never touched, so these can stay set |
+
+`DeploymentGuard` refuses to boot against any non-local database that still
+has a development default in force — the committed JWT key, demo seeding, or
+LAN-wide CORS — and names which one.
+
 ## Endpoints
 
 Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
@@ -55,7 +71,8 @@ Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
 | Method | Path | Notes |
 |---|---|---|
 | `GET` | `/me` | The boot call — user, subscription, entitlement, flags |
-| `PATCH` | `/me` | `{ full_name?, timezone?, avatar_url? }` |
+| `PATCH` | `/me` | `{ full_name?, phone?, timezone?, avatar_url?, date_of_birth?, height_cm?, weight_kg? }` — blank `phone` clears it |
+| `PUT` | `/me/password` | `{ current_password, new_password }` — ends other sessions, returns a fresh pair |
 | `PUT` | `/me/program` | `{ program_id }` |
 
 ### Back office — admin role only
@@ -64,7 +81,8 @@ Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
 |---|---|---|
 | `POST` | `/admin/users` | Provision a client — backs `app/admin/create-user.tsx` |
 | `GET` | `/admin/users` | Roster — backs `app/(tabs)/clients.tsx` |
-| `PATCH` | `/admin/users/{id}/status` | `{ status }` — active / invited / suspended |
+| `PATCH` | `/admin/users/{id}/status` | `{ status }` — active / invited / suspended; not your own |
+| `PUT` | `/admin/users/{id}/password` | `{ password }` — a new temporary password; ends every session. The recovery path until reset emails are wired |
 
 ### Public
 

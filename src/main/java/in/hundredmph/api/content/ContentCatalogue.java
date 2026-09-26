@@ -6,6 +6,7 @@ import in.hundredmph.api.content.model.Exercise;
 import in.hundredmph.api.content.model.LearnContent;
 import in.hundredmph.api.content.model.LearnTopic;
 import in.hundredmph.api.content.model.ProgressionLevel;
+import in.hundredmph.api.content.model.Routine;
 import in.hundredmph.api.content.model.SessionExercise;
 import in.hundredmph.api.content.model.SessionType;
 import in.hundredmph.api.content.model.SignatureExercise;
@@ -60,11 +61,13 @@ public class ContentCatalogue {
     private List<ProgressionLevel> progressionLevels = List.of();
     private List<LearnContent> learnContent = List.of();
     private List<DefaultScheduleEntry> defaultSchedule = List.of();
+    private List<Routine> routines = List.of();
 
     private Map<String, Program> programsById = Map.of();
     private Map<String, Exercise> exercisesById = Map.of();
     private Map<String, SessionType> sessionTypesById = Map.of();
     private Map<String, ProgressionLevel> progressionLevelsById = Map.of();
+    private Map<String, Routine> routinesById = Map.of();
 
     public ContentCatalogue(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -84,14 +87,17 @@ public class ContentCatalogue {
             progressionLevels = List.copyOf(file.progressionLevels());
             learnContent = List.copyOf(file.learnContent());
             defaultSchedule = List.copyOf(file.defaultSchedule());
+            routines = file.routines() == null ? List.of() : List.copyOf(file.routines());
 
             programsById = index(programs, Program::id);
             exercisesById = index(exercises, Exercise::id);
             sessionTypesById = index(sessionTypes, SessionType::id);
             progressionLevelsById = index(progressionLevels, ProgressionLevel::id);
+            routinesById = index(routines, Routine::id);
 
-            log.info("Catalogue loaded: {} programs, {} exercises, {} session types, {} lessons",
-                    programs.size(), exercises.size(), sessionTypes.size(), learnContent.size());
+            log.info("Catalogue loaded: {} programs, {} exercises, {} routines, {} session types, {} lessons",
+                    programs.size(), exercises.size(), routines.size(), sessionTypes.size(),
+                    learnContent.size());
         } catch (IOException ex) {
             // Without a catalogue there is no app, so fail the boot loudly
             // rather than serve empty screens.
@@ -106,6 +112,12 @@ public class ContentCatalogue {
     // ------------------------------------------------------------- lookups
 
     public List<Program> programs() { return programs; }
+
+    public List<Routine> routines() { return routines; }
+
+    public Optional<Routine> routine(String routineId) {
+        return Optional.ofNullable(routinesById.get(routineId));
+    }
 
     public List<LearnTopic> learnTopics() { return learnTopics; }
 
@@ -198,6 +210,8 @@ public class ContentCatalogue {
             List<SignatureExercise> signatureExercises,
             List<ProgressionLevel> progressionLevels,
             List<LearnContent> learnContent,
-            List<DefaultScheduleEntry> defaultSchedule) {
+            List<DefaultScheduleEntry> defaultSchedule,
+            /** Absent from a catalogue written before routines existed. */
+            List<Routine> routines) {
     }
 }

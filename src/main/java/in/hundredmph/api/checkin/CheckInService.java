@@ -12,7 +12,7 @@ import in.hundredmph.api.domain.session.SessionLog;
 import in.hundredmph.api.domain.session.SessionLogRepository;
 import in.hundredmph.api.domain.user.User;
 import in.hundredmph.api.domain.user.UserRepository;
-import in.hundredmph.api.schedule.ScheduleService;
+import in.hundredmph.api.plan.PlanService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -28,16 +28,16 @@ public class CheckInService {
     private final CheckInRepository checkIns;
     private final SessionLogRepository sessions;
     private final UserRepository users;
-    private final ScheduleService schedules;
+    private final PlanService plans;
 
     public CheckInService(CheckInRepository checkIns,
                           SessionLogRepository sessions,
                           UserRepository users,
-                          ScheduleService schedules) {
+                          PlanService plans) {
         this.checkIns = checkIns;
         this.sessions = sessions;
         this.users = users;
-        this.schedules = schedules;
+        this.plans = plans;
     }
 
     /** Writes or revises one day. PUT semantics: calling twice is calling once. */
@@ -137,13 +137,10 @@ public class CheckInService {
      * This is the practice's real health metric, so it is defined once, here.
      */
     private Double adherence(User user, LocalDate today) {
-        String programId = user.getActiveProgramId();
-        if (programId == null) return null;
-
         LocalDate from = today.minusDays(27);
         int planned = 0;
         for (LocalDate day = from; !day.isAfter(today); day = day.plusDays(1)) {
-            if (schedules.plannedSessionType(user.getId(), programId, DayOfWeek.of(day)) != null) {
+            if (plans.hasWorkOn(user.getId(), DayOfWeek.of(day))) {
                 planned++;
             }
         }

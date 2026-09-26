@@ -2,6 +2,7 @@ package in.hundredmph.api.me;
 
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
+import in.hundredmph.api.common.Phones;
 import in.hundredmph.api.domain.billing.Subscription;
 import in.hundredmph.api.domain.billing.SubscriptionRepository;
 import in.hundredmph.api.content.ContentCatalogue;
@@ -15,11 +16,11 @@ import in.hundredmph.api.me.dto.MeResponse;
 import in.hundredmph.api.me.dto.SubscriptionDto;
 import in.hundredmph.api.me.dto.UpdateMeRequest;
 import in.hundredmph.api.me.dto.UserDto;
-import in.hundredmph.api.schedule.ScheduleService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,16 +32,13 @@ public class MeService {
     private final UserRepository users;
     private final SubscriptionRepository subscriptions;
     private final ContentCatalogue catalogue;
-    private final ScheduleService schedules;
 
     public MeService(UserRepository users,
                      SubscriptionRepository subscriptions,
-                     ContentCatalogue catalogue,
-                     ScheduleService schedules) {
+                     ContentCatalogue catalogue) {
         this.users = users;
         this.subscriptions = subscriptions;
         this.catalogue = catalogue;
-        this.schedules = schedules;
     }
 
     public MeResponse boot(String userId) {
@@ -63,12 +61,37 @@ public class MeService {
         if (request.timezone() != null) {
             user.setTimezone(parseTimezone(request.timezone()));
         }
+        if (request.phone() != null) {
+            String phone = Phones.normalise(request.phone());
+            if (phone != null && !Phones.isPlausible(phone)) {
+                throw ApiException.of(ErrorCode.VALIDATION_FAILED, "That phone number does not look right");
+            }
+            if (phone != null && !phone.equals(user.getPhone()) && users.existsByPhone(phone)) {
+                throw ApiException.of(ErrorCode.PHONE_ALREADY_EXISTS, "An account with that phone number already exists");
+            }
+            user.setPhone(phone);
+        }
         if (request.avatarUrl() != null) {
             user.setAvatarUrl(request.avatarUrl().isBlank() ? null : request.avatarUrl().trim());
         }
+        if (request.dateOfBirth() != null) {
+            user.setDateOfBirth(request.dateOfBirth());
+        }
+        if (request.heightCm() != null) {
+            user.setHeightCm(request.heightCm());
+        }
+        if (request.weightKg() != null) {
+            user.setWeightKg(request.weightKg());
+        }
 
         user.setUpdatedAt(Instant.now());
-        users.save(user);
+        try {
+            users.save(user);
+        } catch (DuplicateKeyException ex) {
+            // Two accounts claiming the same number at the same moment; the
+            // unique index settles it and the loser hears why.
+            throw ApiException.of(ErrorCode.PHONE_ALREADY_EXISTS, "An account with that phone number already exists");
+        }
 
         return boot(userId);
     }
@@ -84,10 +107,6 @@ public class MeService {
         user.setActiveProgramId(programId);
         user.setUpdatedAt(Instant.now());
         users.save(user);
-
-        // A program without a week is an empty app, so seed the default plan
-        // the first time someone lands on this program.
-        schedules.seedIfMissing(userId, programId);
 
         return boot(userId);
     }
@@ -109,12 +128,11 @@ public class MeService {
         if (user.getRole() == UserRole.ADMIN) {
             return EntitlementDto.staff();
         }
-        if (user.getActiveProgramId() == null) {
-            return EntitlementDto.denied("no_program");
-        }
 
-        // Membership gating slots in here once billing exists; until then an
-        // active member trains regardless of what the subscription says.
+        // A member with no plan yet can still open the app — it shows them
+        // their physio has not written their week. Membership gating slots in
+        // here once billing exists; until then an active member trains
+        // regardless of what the subscription says.
         return EntitlementDto.allowed();
     }
 

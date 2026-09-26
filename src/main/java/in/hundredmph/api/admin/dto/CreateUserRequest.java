@@ -19,7 +19,7 @@ public record CreateUserRequest(
         @NotBlank @Email String email,
         String phone,
         @NotBlank @Size(min = 8, max = 128) String password,
-        /** Required for members, ignored for admins — staff do not train here. */
+        /** Optional focus area for members, ignored for admins — staff do not train here. */
         String programId,
         @NotNull UserRole role) {
 }

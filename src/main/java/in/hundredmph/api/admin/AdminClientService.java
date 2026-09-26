@@ -13,8 +13,8 @@ import in.hundredmph.api.domain.user.UserRepository;
 import in.hundredmph.api.domain.user.UserRole;
 import in.hundredmph.api.me.dto.UserDto;
 import in.hundredmph.api.progression.ProgressionService;
-import in.hundredmph.api.schedule.ScheduleService;
-import in.hundredmph.api.schedule.dto.ScheduleResponse;
+import in.hundredmph.api.plan.PlanService;
+import in.hundredmph.api.plan.dto.WeeklyPlanResponse;
 import in.hundredmph.api.session.SessionService;
 import in.hundredmph.api.session.dto.SessionLogResponse;
 import java.time.LocalDate;
@@ -40,20 +40,20 @@ public class AdminClientService {
     private static final int QUIET_DAYS = 7;
 
     private final UserRepository users;
-    private final ScheduleService schedules;
+    private final PlanService plans;
     private final SessionService sessions;
     private final CheckInService checkIns;
     private final AssignmentService assignments;
     private final ProgressionService progressions;
 
     public AdminClientService(UserRepository users,
-                              ScheduleService schedules,
+                              PlanService plans,
                               SessionService sessions,
                               CheckInService checkIns,
                               AssignmentService assignments,
                               ProgressionService progressions) {
         this.users = users;
-        this.schedules = schedules;
+        this.plans = plans;
         this.sessions = sessions;
         this.checkIns = checkIns;
         this.assignments = assignments;
@@ -80,9 +80,8 @@ public class AdminClientService {
         LocalDate today = LocalDate.now();
         LocalDate from = today.minusDays(29);
 
-        // Staff accounts have no program, and therefore no week to show.
-        ScheduleResponse schedule =
-                client.getActiveProgramId() == null ? null : schedules.forUser(userId);
+        // Staff accounts do not train, and therefore have no week to show.
+        WeeklyPlanResponse plan = client.getRole() == UserRole.MEMBER ? plans.forUser(userId) : null;
 
         List<SessionLogResponse> recentSessions = sessions.history(userId, from, today);
         List<CheckInResponse> recentCheckIns = checkIns.range(userId, from, today);
@@ -90,7 +89,7 @@ public class AdminClientService {
 
         return new ClientDetailResponse(
                 UserDto.from(client),
-                schedule,
+                plan,
                 recentSessions,
                 recentCheckIns,
                 summary,
@@ -112,6 +111,16 @@ public class AdminClientService {
 
         int activeAssignments = assignments.forUser(client.getId()).size();
 
+        LocalDate today = LocalDate.now();
+        int sessionsThisWeek = (int) recent.stream()
+                .map(SessionLogResponse::localDate)
+                .filter(date -> !date.isBefore(today.minusDays(6)))
+                .distinct()
+                .count();
+        boolean checkedInToday = checkIns.range(client.getId(), today, today).stream()
+                .anyMatch(CheckInResponse::checkedIn);
+        boolean hasPlan = plans.hasAnyWork(client.getId());
+
         boolean quiet = lastActive == null
                 || lastActive.isBefore(LocalDate.now().minusDays(QUIET_DAYS));
         boolean drifting = summary.adherence() != null && summary.adherence() < ADHERENCE_FLOOR;
@@ -121,9 +130,14 @@ public class AdminClientService {
                 UserDto.from(client),
                 summary.adherence(),
                 summary.latestPainScore(),
+                summary.averagePainScore(),
                 lastActive,
                 summary.currentStreak(),
+                summary.totalCheckIns(),
+                checkedInToday,
+                sessionsThisWeek,
                 activeAssignments,
+                hasPlan,
                 quiet || drifting || hurting);
     }
 }

@@ -1,5 +1,8 @@
 package in.hundredmph.api.me;
 
+import in.hundredmph.api.auth.AuthService;
+import in.hundredmph.api.auth.dto.AuthResponse;
+import in.hundredmph.api.me.dto.ChangePasswordRequest;
 import in.hundredmph.api.me.dto.MeResponse;
 import in.hundredmph.api.me.dto.SetProgramRequest;
 import in.hundredmph.api.me.dto.UpdateMeRequest;
@@ -19,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MeController {
 
     private final MeService meService;
+    private final AuthService authService;
 
-    public MeController(MeService meService) {
+    public MeController(MeService meService, AuthService authService) {
         this.meService = meService;
+        this.authService = authService;
     }
 
     /** GET /v1/me — the boot call. */
@@ -40,5 +45,13 @@ public class MeController {
     public MeResponse setProgram(@AuthenticationPrincipal AuthPrincipal principal,
                                   @Valid @RequestBody SetProgramRequest request) {
         return meService.setProgram(principal.userId(), request.programId());
+    }
+
+    /** Returns a fresh token pair: every other session is ended, this one carries on. */
+    @PutMapping("/password")
+    public AuthResponse changePassword(@AuthenticationPrincipal AuthPrincipal principal,
+                                       @Valid @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(principal.userId(), request.currentPassword(),
+                request.newPassword(), request.deviceId());
     }
 }

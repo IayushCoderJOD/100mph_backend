@@ -62,12 +62,10 @@ public class AssignmentService {
                 .orElseThrow(() -> ApiException.of(ErrorCode.EXERCISE_NOT_FOUND,
                         "No exercise with id " + request.exerciseId()));
 
-        // A prescription has to make sense for the program the client is on.
-        String programId = client.getActiveProgramId();
-        if (programId != null && !exercise.programId().equals(programId)) {
-            throw ApiException.of(ErrorCode.VALIDATION_FAILED,
-                    "That exercise belongs to a different program than the client's");
-        }
+        // Deliberately not fenced by program. The program is a starting point;
+        // what a member actually does is the routine and prescriptions the coach
+        // chose for them, and a knee patient who also needs a hip exercise is the
+        // normal case, not an error.
 
         List<AssignedExercise> existing = assignments.findByUserIdAndActiveTrueOrderBySortOrderAsc(userId);
         if (existing.stream().anyMatch(a -> a.getExerciseId().equals(request.exerciseId()))) {

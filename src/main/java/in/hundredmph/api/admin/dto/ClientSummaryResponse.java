@@ -12,9 +12,16 @@ public record ClientSummaryResponse(
         UserDto user,
         Double adherence,
         Integer latestPainScore,
+        Double averagePainScore,
         LocalDate lastActiveDate,
         int currentStreak,
+        int totalCheckIns,
+        boolean checkedInToday,
+        /** Sessions logged in the last seven days, today included. */
+        int sessionsThisWeek,
         int activeAssignments,
+        /** False until the coach has written this client's week. */
+        boolean hasPlan,
         /** True when the coach should look at this client. */
         boolean needsAttention) {
 }

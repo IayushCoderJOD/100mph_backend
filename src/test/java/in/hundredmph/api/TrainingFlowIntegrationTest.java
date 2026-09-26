@@ -2,6 +2,7 @@ package in.hundredmph.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -9,14 +10,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import in.hundredmph.api.domain.assignment.AssignedExerciseRepository;
 import in.hundredmph.api.domain.auth.LoginAttemptRepository;
 import in.hundredmph.api.domain.checkin.CheckInRepository;
-import in.hundredmph.api.domain.schedule.WeeklyScheduleRepository;
+import in.hundredmph.api.domain.progression.UserProgressionRepository;
+import in.hundredmph.api.domain.plan.WeeklyPlanRepository;
 import in.hundredmph.api.domain.session.SessionLogRepository;
 import in.hundredmph.api.seed.DataSeeder;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,16 +51,20 @@ class TrainingFlowIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired LoginAttemptRepository loginAttempts;
-    @Autowired WeeklyScheduleRepository schedules;
+    @Autowired WeeklyPlanRepository plans;
     @Autowired SessionLogRepository sessionLogs;
     @Autowired CheckInRepository checkIns;
+    @Autowired AssignedExerciseRepository assignments;
+    @Autowired UserProgressionRepository progressions;
 
     @BeforeEach
     void reset() {
         loginAttempts.deleteAll();
         sessionLogs.deleteAll();
         checkIns.deleteAll();
-        schedules.deleteAll();
+        plans.deleteAll();
+        assignments.deleteAll();
+        progressions.deleteAll();
     }
 
     // ------------------------------------------------------------- content
@@ -93,89 +100,131 @@ class TrainingFlowIntegrationTest {
     void catalogueIsGated() throws Exception {
         mvc.perform(get("/v1/programs")).andExpect(status().isOk());
         mvc.perform(get("/v1/programs/" + PROGRAM + "/content")).andExpect(status().isUnauthorized());
-        mvc.perform(get("/v1/exercises/ex_dead_bug")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v1/exercises/ex_heel_slide")).andExpect(status().isUnauthorized());
     }
 
-    // ------------------------------------------------------------ schedule
+    // ---------------------------------------------------------------- plan
 
     @Test
-    @DisplayName("a member's week is seeded from the program default on first read")
-    void scheduleSeedsFromProgramDefault() throws Exception {
-        String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
-
-        String body = mvc.perform(get("/v1/schedule").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.program_id").value(PROGRAM))
-                .andReturn().getResponse().getContentAsString();
-
-        JsonNode days = json.readTree(body).get("days");
-        // All seven days present, Monday first, rest days explicitly null.
-        assertThat(days.fieldNames()).toIterable()
-                .containsExactly("monday", "tuesday", "wednesday", "thursday",
-                        "friday", "saturday", "sunday");
-        assertThat(days.size()).isEqualTo(7);
-    }
-
-    @Test
-    @DisplayName("the week can be replaced, and a missing day means rest")
-    void scheduleCanBeReplaced() throws Exception {
-        String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
+    @DisplayName("a coach writes the week, the member reads it, and rest days come back empty")
+    void coachWritesTheWeek() throws Exception {
+        String adminToken = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        String memberToken = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
 
         Map<String, Object> days = new LinkedHashMap<>();
-        days.put("monday", "st_flow");
-        days.put("wednesday", "st_mobility");
+        days.put("monday", List.of(
+                Map.of("exercise_id", "ex_glute_bridge", "prescription", "3 x 2m holds"),
+                Map.of("exercise_id", "ex_tke_seated", "prescription", "3 x 15 reps")));
+        days.put("thursday", List.of(
+                Map.of("exercise_id", "ex_walking_lunge", "prescription", "2 x 10 steps each side")));
 
-        mvc.perform(put("/v1/schedule")
-                        .header("Authorization", "Bearer " + token)
+        String body = mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("days", days))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.days.monday").value("st_flow"))
-                .andExpect(jsonPath("$.days.wednesday").value("st_mobility"))
-                .andExpect(jsonPath("$.days.tuesday").doesNotExist());
+                .andExpect(jsonPath("$.user_id").value(MEMBER_ID))
+                .andExpect(jsonPath("$.days.monday.length()").value(2))
+                .andExpect(jsonPath("$.days.monday[0].sort_order").value(1))
+                .andExpect(jsonPath("$.days.monday[1].exercise.name").value("Terminal Knee Extension (Seated)"))
+                .andExpect(jsonPath("$.days.tuesday.length()").value(0))
+                .andExpect(jsonPath("$.updated_by_name").value("Dr. Ayush Nair"))
+                .andReturn().getResponse().getContentAsString();
+
+        // All seven days present, Monday first, so the app never fills gaps.
+        assertThat(json.readTree(body).get("days").fieldNames()).toIterable()
+                .containsExactly("monday", "tuesday", "wednesday", "thursday",
+                        "friday", "saturday", "sunday");
+
+        mvc.perform(get("/v1/plan").header("Authorization", "Bearer " + memberToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days.monday[0].prescription").value("3 x 2m holds"))
+                .andExpect(jsonPath("$.days.thursday[0].exercise_id").value("ex_walking_lunge"));
+
+        // The coach sees the same week on the client's page.
+        mvc.perform(get("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days.monday.length()").value(2));
     }
 
     @Test
-    @DisplayName("a session type from another program cannot be scheduled")
-    void scheduleRejectsForeignSessionType() throws Exception {
+    @DisplayName("a member with no plan yet reads an empty week, not an error")
+    void unplannedMemberReadsEmptyWeek() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
 
-        Map<String, Object> days = new HashMap<>();
-        days.put("monday", "st_does_not_exist");
+        mvc.perform(get("/v1/plan").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days.monday").isEmpty())
+                .andExpect(jsonPath("$.days.sunday").isEmpty())
+                .andExpect(jsonPath("$.updated_at").doesNotExist());
+    }
 
-        mvc.perform(put("/v1/schedule")
-                        .header("Authorization", "Bearer " + token)
+    @Test
+    @DisplayName("the plan is validated at the door: unknown exercises, repeats and bad days")
+    void planIsValidated() throws Exception {
+        String adminToken = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("days", days))))
+                        .content(json.writeValueAsString(Map.of("days", Map.of("monday", List.of(
+                                Map.of("exercise_id", "ex_nope", "prescription", "x")))))))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.code").value("schedule_invalid_day"))
+                .andExpect(jsonPath("$.error.code").value("exercise_not_found"))
                 .andExpect(jsonPath("$.error.details.day").value("monday"));
+
+        mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("days", Map.of("monday", List.of(
+                                Map.of("exercise_id", "ex_heel_slide", "prescription", "x"),
+                                Map.of("exercise_id", "ex_heel_slide", "prescription", "y")))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("validation_failed"));
+
+        mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("days", Map.of("funday", List.of(
+                                Map.of("exercise_id", "ex_heel_slide", "prescription", "x")))))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("schedule_invalid_day"));
+
+        // A blank prescription is a bean-validation failure, caught before the service.
+        mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("days", Map.of("monday", List.of(
+                                Map.of("exercise_id", "ex_heel_slide", "prescription", "  ")))))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     @DisplayName("staff have no week — they do not train here")
-    void staffHaveNoSchedule() throws Exception {
+    void staffHaveNoPlan() throws Exception {
         String token = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
-        mvc.perform(get("/v1/schedule").header("Authorization", "Bearer " + token))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.code").value("no_active_program"));
+        mvc.perform(get("/v1/plan").header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("validation_failed"));
     }
 
     // ------------------------------------------------------------- sessions
 
     @Test
-    @DisplayName("the day's plan expands the scheduled session into its running order")
+    @DisplayName("the day's plan is the week the coach wrote, with each exercise inlined")
     void sessionPlanExpandsExercises() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
 
-        // Put a Flow session on every day so whichever day the test runs is one.
-        putFullWeek(token, "st_flow");
+        // Put work on every day so whichever day the test runs is one.
+        putFullWeek();
 
         mvc.perform(get("/v1/sessions/plan").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.session_type.name").value("Flow"))
-                .andExpect(jsonPath("$.exercises[0].exercise.name").exists())
-                .andExpect(jsonPath("$.exercises[0].prescription").exists())
+                .andExpect(jsonPath("$.local_date").exists())
+                .andExpect(jsonPath("$.exercises[0].exercise.name").value("Glute Bridge"))
+                .andExpect(jsonPath("$.exercises[0].prescription").value("3 x 2m holds"))
+                .andExpect(jsonPath("$.exercises[1].exercise.id").value("ex_heel_slide"))
                 .andExpect(jsonPath("$.completed").value(false));
     }
 
@@ -184,12 +233,7 @@ class TrainingFlowIntegrationTest {
     void restDayReturnsEmptyPlan() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
 
-        mvc.perform(put("/v1/schedule")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("days", Map.of()))))
-                .andExpect(status().isOk());
-
+        // No plan written at all: every day is rest, and that is not an error.
         mvc.perform(get("/v1/sessions/plan").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.session_type").doesNotExist())
@@ -200,7 +244,7 @@ class TrainingFlowIntegrationTest {
     @DisplayName("logging the same session twice writes one row, not two")
     void sessionLogIsIdempotent() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
-        putFullWeek(token, "st_flow");
+        putFullWeek();
 
         String sessionId = UUID.randomUUID().toString();
         Map<String, Object> body = Map.of(
@@ -208,7 +252,7 @@ class TrainingFlowIntegrationTest {
                 "source", "guided",
                 "duration_min", 42,
                 "exercises", java.util.List.of(
-                        Map.of("exercise_id", "ex_dead_bug", "completed", true)));
+                        Map.of("exercise_id", "ex_heel_slide", "completed", true)));
 
         mvc.perform(post("/v1/sessions")
                         .header("Authorization", "Bearer " + token)
@@ -234,7 +278,7 @@ class TrainingFlowIntegrationTest {
     @DisplayName("completed dates come back for the week strip")
     void completedDatesAreListed() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
-        putFullWeek(token, "st_flow");
+        putFullWeek();
 
         mvc.perform(post("/v1/sessions")
                         .header("Authorization", "Bearer " + token)
@@ -250,10 +294,27 @@ class TrainingFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("a session cannot be logged for a future day or outside the window")
+    void sessionDatesAreBounded() throws Exception {
+        String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
+
+        for (LocalDate day : List.of(LocalDate.now().plusDays(2), LocalDate.now().minusDays(20))) {
+            mvc.perform(post("/v1/sessions")
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of(
+                                    "id", UUID.randomUUID().toString(),
+                                    "local_date", day.toString()))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("validation_failed"));
+        }
+    }
+
+    @Test
     @DisplayName("a date range includes both its endpoints")
     void rangeQueriesAreInclusive() throws Exception {
         String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
-        putFullWeek(token, "st_flow");
+        putFullWeek();
 
         LocalDate today = LocalDate.now();
         LocalDate threeDaysAgo = today.minusDays(3);
@@ -404,7 +465,7 @@ class TrainingFlowIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of(
-                                "exercise_id", "ex_dead_bug",
+                                "exercise_id", "ex_heel_slide",
                                 "prescription", "2 x 8 reps · Slow tempo",
                                 "note", "Stop if the back lifts."))))
                 .andExpect(status().isCreated())
@@ -422,7 +483,7 @@ class TrainingFlowIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of(
-                                "exercise_id", "ex_dead_bug",
+                                "exercise_id", "ex_heel_slide",
                                 "prescription", "again"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("already_assigned"));
@@ -448,7 +509,10 @@ class TrainingFlowIntegrationTest {
                 .andExpect(jsonPath("$[0].user.role").value("member"))
                 .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("needs_attention")))
                 .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("adherence")))
-                .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("latest_pain_score")));
+                .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("latest_pain_score")))
+                .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("sessions_this_week")))
+                .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("checked_in_today")))
+                .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.hasKey("has_plan")));
     }
 
     @Test
@@ -459,7 +523,7 @@ class TrainingFlowIntegrationTest {
         mvc.perform(get("/v1/admin/clients/" + MEMBER_ID).header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.id").value(MEMBER_ID))
-                .andExpect(jsonPath("$.schedule.program_id").value(PROGRAM))
+                .andExpect(jsonPath("$.plan.days.monday").isArray())
                 .andExpect(jsonPath("$.summary.current_streak").exists())
                 .andExpect(jsonPath("$.assigned_exercises").isArray())
                 .andExpect(jsonPath("$.progression").isArray());
@@ -475,16 +539,97 @@ class TrainingFlowIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ------------------------------------------------------------- profile
+
+    @Test
+    @DisplayName("a member fills in their age, height and weight, and the coach sees them")
+    void memberFillsInProfile() throws Exception {
+        String memberToken = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
+        String adminToken = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        mvc.perform(patch("/v1/me")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "date_of_birth", "1995-03-14",
+                                "height_cm", 176,
+                                "weight_kg", 72.5))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.date_of_birth").value("1995-03-14"))
+                .andExpect(jsonPath("$.user.height_cm").value(176))
+                .andExpect(jsonPath("$.user.weight_kg").value(72.5));
+
+        // A partial body leaves the rest alone.
+        mvc.perform(patch("/v1/me")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("weight_kg", 71.0))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.height_cm").value(176))
+                .andExpect(jsonPath("$.user.weight_kg").value(71.0));
+
+        // Height in feet is the classic unit slip; it is caught at the door.
+        mvc.perform(patch("/v1/me")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("height_cm", 6))))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(get("/v1/admin/clients/" + MEMBER_ID).header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.date_of_birth").value("1995-03-14"))
+                .andExpect(jsonPath("$.user.height_cm").value(176));
+    }
+
+    // ------------------------------------------------------------- routines
+
+    @Test
+    @DisplayName("routines are served from the catalogue with their exercises inlined")
+    void routinesAreServed() throws Exception {
+        String token = accessToken(MEMBER_EMAIL, MEMBER_PASSWORD);
+
+        mvc.perform(get("/v1/routines").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].exercises[0].exercise_id").exists())
+                .andExpect(jsonPath("$[0].exercises[0].prescription").exists());
+
+        mvc.perform(get("/v1/routines/rt_knee_foundation").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Knee Foundation"));
+    }
+
+    @Test
+    @DisplayName("a prescription is not fenced by the client's program")
+    void prescriptionsCrossPrograms() throws Exception {
+        String adminToken = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        // A lower-back member given a knee exercise: the normal case, not an error.
+        mvc.perform(post("/v1/admin/clients/" + MEMBER_ID + "/assigned-exercises")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "exercise_id", "ex_tke_seated",
+                                "prescription", "3 x 15 reps"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.exercise.program_id").value("prog_knee"));
+    }
+
     // -------------------------------------------------------------- helpers
 
-    private void putFullWeek(String token, String sessionTypeId) throws Exception {
+    /** The coach puts the same two exercises on every day, so any day the test runs is a training day. */
+    private void putFullWeek() throws Exception {
+        String adminToken = accessToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        List<Map<String, String>> work = List.of(
+                Map.of("exercise_id", "ex_glute_bridge", "prescription", "3 x 2m holds"),
+                Map.of("exercise_id", "ex_heel_slide", "prescription", "2 x 8 reps"));
         Map<String, Object> days = new LinkedHashMap<>();
         for (String day : new String[] {"monday", "tuesday", "wednesday", "thursday",
                 "friday", "saturday", "sunday"}) {
-            days.put(day, sessionTypeId);
+            days.put(day, work);
         }
-        mvc.perform(put("/v1/schedule")
-                        .header("Authorization", "Bearer " + token)
+        mvc.perform(put("/v1/admin/clients/" + MEMBER_ID + "/plan")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("days", days))))
                 .andExpect(status().isOk());

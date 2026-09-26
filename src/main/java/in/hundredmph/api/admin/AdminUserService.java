@@ -4,6 +4,7 @@ import in.hundredmph.api.admin.dto.CreateUserRequest;
 import in.hundredmph.api.auth.AuthService;
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
+import in.hundredmph.api.common.Phones;
 import in.hundredmph.api.content.ContentCatalogue;
 import in.hundredmph.api.domain.user.User;
 import in.hundredmph.api.domain.user.UserRepository;
@@ -49,7 +50,10 @@ public class AdminUserService {
                     "An account with that email already exists");
         }
 
-        String phone = normalisePhone(request.phone());
+        String phone = Phones.normalise(request.phone());
+        if (phone != null && !Phones.isPlausible(phone)) {
+            throw ApiException.of(ErrorCode.VALIDATION_FAILED, "That phone number does not look right");
+        }
         if (phone != null && users.existsByPhone(phone)) {
             throw ApiException.of(ErrorCode.PHONE_ALREADY_EXISTS,
                     "An account with that phone number already exists");
@@ -93,7 +97,12 @@ public class AdminUserService {
                 .toList();
     }
 
-    public UserDto setStatus(String userId, UserStatus status) {
+    public UserDto setStatus(String actorId, String userId, UserStatus status) {
+        // Suspending yourself would end your own session with nobody left to
+        // undo it if you are the only admin.
+        if (userId.equals(actorId)) {
+            throw ApiException.of(ErrorCode.FORBIDDEN, "You cannot change the status of your own account");
+        }
         User user = users.findById(userId)
                 .filter(candidate -> !candidate.isDeleted())
                 .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such user"));
@@ -111,25 +120,22 @@ public class AdminUserService {
         return UserDto.from(user);
     }
 
+    public void setPassword(String userId, String password) {
+        authService.setPassword(userId, password);
+    }
+
     private String resolveProgram(CreateUserRequest request) {
         if (request.role() == UserRole.ADMIN) {
             return null;
         }
+        // Optional now: the week the coach writes is what a member trains on,
+        // and the program is only a focus area for the Learn content.
         if (request.programId() == null || request.programId().isBlank()) {
-            throw ApiException.of(ErrorCode.VALIDATION_FAILED, "A member must be given a program");
+            return null;
         }
         if (!catalogue.hasProgram(request.programId())) {
             throw ApiException.of(ErrorCode.PROGRAM_NOT_FOUND, "No program with id " + request.programId());
         }
         return request.programId();
-    }
-
-    /** Keeps the digits and a leading +, so "+91 90000 00000" stores comparably. */
-    private static String normalisePhone(String phone) {
-        if (phone == null || phone.isBlank()) {
-            return null;
-        }
-        String cleaned = phone.trim().replaceAll("[^+0-9]", "");
-        return cleaned.isEmpty() ? null : cleaned;
     }
 }

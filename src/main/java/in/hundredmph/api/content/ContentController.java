@@ -5,6 +5,7 @@ import in.hundredmph.api.common.ErrorCode;
 import in.hundredmph.api.content.model.Exercise;
 import in.hundredmph.api.content.model.LearnContent;
 import in.hundredmph.api.content.model.ProgramContent;
+import in.hundredmph.api.content.model.Routine;
 import in.hundredmph.api.domain.content.Program;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,6 +59,19 @@ public class ContentController {
                 catalogue.learnContentFor(programId),
                 catalogue.learnTopics(),
                 catalogue.defaultScheduleFor(programId));
+    }
+
+    /** Every routine a coach can set — backs the picker on the client screen. */
+    @GetMapping("/routines")
+    public List<Routine> routines() {
+        return catalogue.routines();
+    }
+
+    @GetMapping("/routines/{routineId}")
+    public Routine routine(@PathVariable String routineId) {
+        return catalogue.routine(routineId)
+                .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND,
+                        "No routine with id " + routineId));
     }
 
     /** One exercise, for the guide screen opened from a session or a plan. */

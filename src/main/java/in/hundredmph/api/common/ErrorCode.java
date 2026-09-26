@@ -33,6 +33,11 @@ public enum ErrorCode {
     PHONE_ALREADY_EXISTS("phone_already_exists", HttpStatus.CONFLICT),
 
     PASSWORD_TOO_WEAK("password_too_weak", HttpStatus.UNPROCESSABLE_ENTITY),
+    /**
+     * Changing a password with the wrong current one. Deliberately not a 401:
+     * the client reads 401 as an expired session and would sign the member out.
+     */
+    CURRENT_PASSWORD_INCORRECT("current_password_incorrect", HttpStatus.UNPROCESSABLE_ENTITY),
     RESET_TOKEN_INVALID("reset_token_invalid", HttpStatus.UNPROCESSABLE_ENTITY),
     PROGRAM_NOT_FOUND("program_not_found", HttpStatus.UNPROCESSABLE_ENTITY),
     /** A session type was scheduled onto a program it does not belong to. */

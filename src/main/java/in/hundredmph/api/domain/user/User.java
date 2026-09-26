@@ -45,6 +45,20 @@ public class User {
     @Field("active_program_id")
     private String activeProgramId;
 
+    /**
+     * Filled in by the member from Settings, and health data under the DPDP
+     * Act like the pain log: never logged, and part of the export/delete path
+     * when that is built.
+     */
+    @Field("date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Field("height_cm")
+    private Integer heightCm;
+
+    @Field("weight_kg")
+    private Double weightKg;
+
     @Field("password_hash")
     private String passwordHash;
 
@@ -87,6 +101,15 @@ public class User {
 
     public String getActiveProgramId() { return activeProgramId; }
     public void setActiveProgramId(String activeProgramId) { this.activeProgramId = activeProgramId; }
+
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+    public Integer getHeightCm() { return heightCm; }
+    public void setHeightCm(Integer heightCm) { this.heightCm = heightCm; }
+
+    public Double getWeightKg() { return weightKg; }
+    public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
 
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }

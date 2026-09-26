@@ -46,6 +46,12 @@ app:
     # Seeds programs, plans and the demo accounts from the app's mock.ts.
     # Turn this off the moment real data exists.
     enabled: ${SEED_ENABLED:true}
+  bootstrap:
+    # The first admin of a fresh deployment, created once if no account has
+    # this email. Needed in production, where seeding is off. 12+ characters.
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    admin-name: ${BOOTSTRAP_ADMIN_NAME:100mph Admin}
 
 logging:
   level:

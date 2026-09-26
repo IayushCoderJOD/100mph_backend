@@ -21,6 +21,10 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -47,6 +51,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final LoginThrottle loginThrottle;
     private final AuthProperties authProperties;
+    private final MongoTemplate mongo;
 
     public AuthService(UserRepository users,
                        RefreshTokenRepository refreshTokens,
@@ -55,7 +60,8 @@ public class AuthService {
                        TokenGenerator tokenGenerator,
                        JwtService jwtService,
                        LoginThrottle loginThrottle,
-                       AuthProperties authProperties) {
+                       AuthProperties authProperties,
+                       MongoTemplate mongo) {
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.passwordResets = passwordResets;
@@ -64,6 +70,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.loginThrottle = loginThrottle;
         this.authProperties = authProperties;
+        this.mongo = mongo;
     }
 
     // ---------------------------------------------------------------- sign in
@@ -177,8 +184,21 @@ public class AuthService {
             users.save(user);
         }
 
-        stored.setRevokedAt(now);
-        refreshTokens.save(stored);
+        // Claim the token atomically. Reading it above and saving it here would
+        // let two requests racing with the same token both pass the revoked
+        // check and both walk away with a fresh pair — exactly the copy the
+        // reuse detection exists to catch. Only one update can flip it.
+        boolean claimed = mongo.updateFirst(
+                Query.query(Criteria.where("id").is(stored.getId()).and("revokedAt").is(null)),
+                Update.update("revokedAt", now),
+                RefreshToken.class).getModifiedCount() == 1;
+        if (!claimed) {
+            revokeFamily(stored.getFamilyId(), now);
+            log.warn("Concurrent refresh with one token for user {}; family {} revoked",
+                    stored.getUserId(), stored.getFamilyId());
+            throw ApiException.of(ErrorCode.REFRESH_TOKEN_REUSED,
+                    "Refresh token has already been used; sign in again");
+        }
 
         return issueTokens(user, stored.getFamilyId(), stored.getDeviceId(), now);
     }
@@ -257,6 +277,52 @@ public class AuthService {
         // Changing a password is how someone reacts to a compromise, so it has
         // to log every other device out, not just set a new secret.
         revokeAllSessions(user.getId(), now);
+    }
+
+    /**
+     * A coach sets a new temporary password for someone who is locked out.
+     * Every session the account had is ended, so the old password — and any
+     * device still holding a token — stops working at once.
+     */
+    public void setPassword(String userId, String newPassword) {
+        Instant now = Instant.now();
+        User user = users.findById(userId)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such user"));
+
+        assertPasswordStrongEnough(newPassword);
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(now);
+        users.save(user);
+
+        revokeAllSessions(userId, now);
+    }
+
+    /**
+     * A signed-in member replaces their own password. Every other device is
+     * signed out; this one is handed a fresh pair so it stays signed in.
+     */
+    public AuthResponse changePassword(String userId, String currentPassword, String newPassword, String deviceId) {
+        Instant now = Instant.now();
+        User user = users.findById(userId)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such user"));
+
+        if (!verifyPassword(currentPassword, user.getPasswordHash())) {
+            throw ApiException.of(ErrorCode.CURRENT_PASSWORD_INCORRECT, "Your current password is not right");
+        }
+        assertPasswordStrongEnough(newPassword);
+        if (verifyPassword(newPassword, user.getPasswordHash())) {
+            throw ApiException.of(ErrorCode.VALIDATION_FAILED, "The new password must be different");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(now);
+        users.save(user);
+
+        revokeAllSessions(userId, now);
+        return issueTokens(user, UUID.randomUUID().toString(), deviceId, now);
     }
 
     public void assertPasswordStrongEnough(String password) {

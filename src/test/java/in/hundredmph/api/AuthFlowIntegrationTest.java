@@ -1,19 +1,23 @@
 package in.hundredmph.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import in.hundredmph.api.config.BootstrapProperties;
 import in.hundredmph.api.domain.auth.LoginAttemptRepository;
 import in.hundredmph.api.domain.auth.RefreshTokenRepository;
 import in.hundredmph.api.domain.billing.SubscriptionRepository;
 import in.hundredmph.api.domain.user.UserRepository;
+import in.hundredmph.api.seed.AdminBootstrap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -46,6 +51,7 @@ class AuthFlowIntegrationTest {
     @Autowired RefreshTokenRepository refreshTokens;
     @Autowired LoginAttemptRepository loginAttempts;
     @Autowired SubscriptionRepository subscriptions;
+    @Autowired PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void clearThrottle() {
@@ -396,6 +402,210 @@ class AuthFlowIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("an admin cannot suspend their own account")
+    void adminCannotSuspendSelf() throws Exception {
+        String adminToken = login(ADMIN_EMAIL, ADMIN_PASSWORD).get("access_token").asText();
+        String adminId = users.findByEmail(ADMIN_EMAIL).orElseThrow().getId();
+
+        mvc.perform(patch("/v1/admin/users/" + adminId + "/status")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("status", "suspended"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("forbidden"));
+
+        assertThat(users.findByEmail(ADMIN_EMAIL).orElseThrow().getStatus().name()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("a member can add, change and clear their phone, but not take someone else's")
+    void memberEditsPhone() throws Exception {
+        String adminToken = login(ADMIN_EMAIL, ADMIN_PASSWORD).get("access_token").asText();
+        String first = "phone-a-" + System.currentTimeMillis() + "@100mph.in";
+        String second = "phone-b-" + System.currentTimeMillis() + "@100mph.in";
+
+        try {
+            createMember(adminToken, first, "temp-password-1");
+            createMember(adminToken, second, "temp-password-1");
+            String firstToken = login(first, "temp-password-1").get("access_token").asText();
+            String secondToken = login(second, "temp-password-1").get("access_token").asText();
+            String number = "+91 98" + String.valueOf(System.currentTimeMillis()).substring(5);
+
+            mvc.perform(patch("/v1/me")
+                            .header("Authorization", "Bearer " + firstToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("phone", number))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.user.phone").value(number.replace(" ", "")));
+
+            mvc.perform(patch("/v1/me")
+                            .header("Authorization", "Bearer " + secondToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("phone", number))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error.code").value("phone_already_exists"));
+
+            mvc.perform(patch("/v1/me")
+                            .header("Authorization", "Bearer " + secondToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("phone", "12"))))
+                    .andExpect(status().isBadRequest());
+
+            mvc.perform(patch("/v1/me")
+                            .header("Authorization", "Bearer " + firstToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("phone", ""))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.user.phone").doesNotExist());
+        } finally {
+            deleteUser(first);
+            deleteUser(second);
+        }
+    }
+
+    // ------------------------------------------------------------- passwords
+
+    @Test
+    @DisplayName("an admin reset replaces the password and ends every open session")
+    void adminResetsPassword() throws Exception {
+        String adminToken = login(ADMIN_EMAIL, ADMIN_PASSWORD).get("access_token").asText();
+        String email = "reset-" + System.currentTimeMillis() + "@100mph.in";
+
+        try {
+            String userId = createMember(adminToken, email, "temp-password-1");
+            String refreshToken = login(email, "temp-password-1").get("refresh_token").asText();
+
+            // Too short is refused before anything changes.
+            mvc.perform(put("/v1/admin/users/" + userId + "/password")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("password", "short"))))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.error.code").value("password_too_weak"));
+
+            mvc.perform(put("/v1/admin/users/" + userId + "/password")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("password", "fresh-password-2"))))
+                    .andExpect(status().isNoContent());
+
+            mvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("refresh_token", refreshToken))))
+                    .andExpect(status().isUnauthorized());
+
+            loginAttempts.deleteAll();
+            mvc.perform(post("/v1/auth/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(
+                                    Map.of("email", email, "password", "temp-password-1"))))
+                    .andExpect(status().isUnauthorized());
+
+            assertThat(login(email, "fresh-password-2").get("access_token").asText()).isNotBlank();
+        } finally {
+            deleteUser(email);
+        }
+    }
+
+    @Test
+    @DisplayName("a member reset is admin-only")
+    void passwordResetIsAdminOnly() throws Exception {
+        String memberToken = login(MEMBER_EMAIL, MEMBER_PASSWORD).get("access_token").asText();
+        String memberId = users.findByEmail(MEMBER_EMAIL).orElseThrow().getId();
+
+        mvc.perform(put("/v1/admin/users/" + memberId + "/password")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("password", "whatever-123"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("a member changes their own password and stays signed in on this device only")
+    void memberChangesOwnPassword() throws Exception {
+        String adminToken = login(ADMIN_EMAIL, ADMIN_PASSWORD).get("access_token").asText();
+        String email = "change-" + System.currentTimeMillis() + "@100mph.in";
+
+        try {
+            createMember(adminToken, email, "temp-password-1");
+            JsonNode session = login(email, "temp-password-1");
+            String accessToken = session.get("access_token").asText();
+            String oldRefresh = session.get("refresh_token").asText();
+
+            // A wrong current password is a 422 with its own code — never a 401,
+            // which the client would read as an expired session.
+            mvc.perform(put("/v1/me/password")
+                            .header("Authorization", "Bearer " + accessToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of(
+                                    "current_password", "not-my-password",
+                                    "new_password", "my-own-password-9"))))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.error.code").value("current_password_incorrect"));
+
+            String changed = mvc.perform(put("/v1/me/password")
+                            .header("Authorization", "Bearer " + accessToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of(
+                                    "current_password", "temp-password-1",
+                                    "new_password", "my-own-password-9",
+                                    "device_id", "test-device"))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.access_token").exists())
+                    .andReturn().getResponse().getContentAsString();
+            String newRefresh = json.readTree(changed).get("refresh_token").asText();
+
+            // Every earlier session is over…
+            mvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("refresh_token", oldRefresh))))
+                    .andExpect(status().isUnauthorized());
+
+            // …the one handed back works…
+            mvc.perform(post("/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("refresh_token", newRefresh))))
+                    .andExpect(status().isOk());
+
+            // …and only the new password signs in.
+            assertThat(login(email, "my-own-password-9").get("access_token").asText()).isNotBlank();
+        } finally {
+            deleteUser(email);
+        }
+    }
+
+    // ------------------------------------------------------------- bootstrap
+
+    @Test
+    @DisplayName("the bootstrap admin is created once and never overwritten")
+    void bootstrapAdminIsCreatedOnce() throws Exception {
+        String email = "boot-" + System.currentTimeMillis() + "@100mph.in";
+        try {
+            new AdminBootstrap(new BootstrapProperties(email, "first-boot-password", "Boot Admin"),
+                    users, passwordEncoder).run(null);
+            assertThat(login(email, "first-boot-password").at("/user/role").asText()).isEqualTo("admin");
+
+            // A later boot with a different password must not reset the account.
+            new AdminBootstrap(new BootstrapProperties(email, "some-other-password", "Boot Admin"),
+                    users, passwordEncoder).run(null);
+            assertThat(login(email, "first-boot-password").at("/user/role").asText()).isEqualTo("admin");
+        } finally {
+            deleteUser(email);
+        }
+    }
+
+    @Test
+    @DisplayName("a short bootstrap password stops the boot rather than creating a weak admin")
+    void bootstrapRefusesWeakPassword() {
+        String email = "boot-weak-" + System.currentTimeMillis() + "@100mph.in";
+        assertThatThrownBy(() ->
+                        new AdminBootstrap(new BootstrapProperties(email, "short", null), users, passwordEncoder)
+                                .run(null))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(users.findByEmail(email)).isEmpty();
+    }
+
     // ------------------------------------------------------------- public
 
     @Test
@@ -408,6 +618,27 @@ class AuthFlowIntegrationTest {
         mvc.perform(get("/v1/programs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].slug").exists());
+    }
+
+    private String createMember(String adminToken, String email, String password) throws Exception {
+        String created = mvc.perform(post("/v1/admin/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of(
+                                "full_name", "Test Client",
+                                "email", email,
+                                "password", password,
+                                "role", "member"))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return json.readTree(created).get("id").asText();
+    }
+
+    private void deleteUser(String email) {
+        users.findByEmail(email).ifPresent(user -> {
+            refreshTokens.deleteAll(refreshTokens.findByUserId(user.getId()));
+            users.delete(user);
+        });
     }
 
     private JsonNode login(String email, String password) throws Exception {

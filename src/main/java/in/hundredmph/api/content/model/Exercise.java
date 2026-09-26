@@ -9,6 +9,8 @@ public record Exercise(
         String id,
         String programId,
         String name,
+        /** How the picker shelves it: back, core, hips_glutes, lower_body, ankle_calf, upper_body, mobility, athletic. */
+        String category,
         /** One line on what it works, for the list and the guide subtitle. */
         String focus,
         String videoUrl,

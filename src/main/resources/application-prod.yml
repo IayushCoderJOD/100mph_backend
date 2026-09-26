@@ -1,4 +1,9 @@
 app:
+  jwt:
+    # No fallback in production: a missing JWT_SECRET must stop the boot. The
+    # dev default in application.yml is in the repository, so anyone could
+    # sign an admin token with it.
+    secret: ${JWT_SECRET}
   seed:
     enabled: false
   cors:
