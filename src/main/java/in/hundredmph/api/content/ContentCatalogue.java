@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -43,6 +44,10 @@ import org.springframework.stereotype.Component;
  * intended trade: it is the correct shape for a catalogue that a physio edits
  * a few times a year, and the wrong one for anything a user can change — all
  * of which lives in Mongo.
+ *
+ * <p>Exercises are the exception. Admins add and film movements from the app,
+ * so they live in the Mongo-backed {@link in.hundredmph.api.exercise.ExerciseLibrary};
+ * the exercises in this file only seed it.
  */
 @Component
 public class ContentCatalogue {
@@ -55,7 +60,8 @@ public class ContentCatalogue {
     private List<Program> programs = List.of();
     private List<LearnTopic> learnTopics = List.of();
     private List<SessionType> sessionTypes = List.of();
-    private List<Exercise> exercises = List.of();
+    /** Seeds for the exercise library — filmed movements, then unfilmed drafts. */
+    private List<Exercise> authoredExercises = List.of();
     private List<SessionExercise> sessionExercises = List.of();
     private List<SignatureExercise> signatureExercises = List.of();
     private List<ProgressionLevel> progressionLevels = List.of();
@@ -64,7 +70,6 @@ public class ContentCatalogue {
     private List<Routine> routines = List.of();
 
     private Map<String, Program> programsById = Map.of();
-    private Map<String, Exercise> exercisesById = Map.of();
     private Map<String, SessionType> sessionTypesById = Map.of();
     private Map<String, ProgressionLevel> progressionLevelsById = Map.of();
     private Map<String, Routine> routinesById = Map.of();
@@ -81,7 +86,10 @@ public class ContentCatalogue {
             programs = List.copyOf(file.programs());
             learnTopics = List.copyOf(file.learnTopics());
             sessionTypes = List.copyOf(file.sessionTypes());
-            exercises = List.copyOf(file.exercises());
+            authoredExercises = Stream.concat(
+                            file.exercises().stream(),
+                            file.draftExercises() == null ? Stream.<Exercise>empty() : file.draftExercises().stream())
+                    .toList();
             sessionExercises = List.copyOf(file.sessionExercises());
             signatureExercises = List.copyOf(file.signatureExercises());
             progressionLevels = List.copyOf(file.progressionLevels());
@@ -90,13 +98,12 @@ public class ContentCatalogue {
             routines = file.routines() == null ? List.of() : List.copyOf(file.routines());
 
             programsById = index(programs, Program::id);
-            exercisesById = index(exercises, Exercise::id);
             sessionTypesById = index(sessionTypes, SessionType::id);
             progressionLevelsById = index(progressionLevels, ProgressionLevel::id);
             routinesById = index(routines, Routine::id);
 
             log.info("Catalogue loaded: {} programs, {} exercises, {} routines, {} session types, {} lessons",
-                    programs.size(), exercises.size(), routines.size(), sessionTypes.size(),
+                    programs.size(), authoredExercises.size(), routines.size(), sessionTypes.size(),
                     learnContent.size());
         } catch (IOException ex) {
             // Without a catalogue there is no app, so fail the boot loudly
@@ -129,8 +136,12 @@ public class ContentCatalogue {
         return programId != null && programsById.containsKey(programId);
     }
 
-    public Optional<Exercise> exercise(String exerciseId) {
-        return Optional.ofNullable(exercisesById.get(exerciseId));
+    /**
+     * Every movement the catalogue authors, drafts included. Only the exercise
+     * library reads this: it is a seed, and the library is what serves them.
+     */
+    public List<Exercise> authoredExercises() {
+        return authoredExercises;
     }
 
     public Optional<SessionType> sessionType(String sessionTypeId) {
@@ -145,10 +156,6 @@ public class ContentCatalogue {
 
     public List<SessionType> sessionTypesFor(String programId) {
         return sessionTypes.stream().filter(s -> s.programId().equals(programId)).toList();
-    }
-
-    public List<Exercise> exercisesFor(String programId) {
-        return exercises.stream().filter(e -> e.programId().equals(programId)).toList();
     }
 
     /** The running order for one session type, already sorted. */
@@ -206,6 +213,8 @@ public class ContentCatalogue {
             List<LearnTopic> learnTopics,
             List<SessionType> sessionTypes,
             List<Exercise> exercises,
+            /** Written up but not yet filmed; seeded as drafts. Absent from older files. */
+            List<Exercise> draftExercises,
             List<SessionExercise> sessionExercises,
             List<SignatureExercise> signatureExercises,
             List<ProgressionLevel> progressionLevels,

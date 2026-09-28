@@ -20,7 +20,20 @@
   <properties>
     <java.version>21</java.version>
     <jjwt.version>0.12.7</jjwt.version>
+    <awssdk.version>2.55.6</awssdk.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -60,6 +73,32 @@
       <artifactId>jjwt-jackson</artifactId>
       <version>${jjwt.version}</version>
       <scope>runtime</scope>
+    </dependency>
+
+    <!-- Cloudflare R2 speaks the S3 API: presigned uploads and HEAD checks.
+         Only the blocking URLConnection client is needed, so the Netty and
+         Apache clients the SDK would otherwise pull in are left out. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>netty-nio-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>apache-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>apache5-client</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>url-connection-client</artifactId>
     </dependency>
 
     <dependency>

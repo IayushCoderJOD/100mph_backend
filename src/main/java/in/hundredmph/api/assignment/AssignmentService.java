@@ -4,12 +4,12 @@ import in.hundredmph.api.assignment.dto.AssignExerciseRequest;
 import in.hundredmph.api.assignment.dto.AssignedExerciseResponse;
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
-import in.hundredmph.api.content.ContentCatalogue;
 import in.hundredmph.api.content.model.Exercise;
 import in.hundredmph.api.domain.assignment.AssignedExercise;
 import in.hundredmph.api.domain.assignment.AssignedExerciseRepository;
 import in.hundredmph.api.domain.user.User;
 import in.hundredmph.api.domain.user.UserRepository;
+import in.hundredmph.api.exercise.ExerciseLibrary;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -23,14 +23,14 @@ public class AssignmentService {
 
     private final AssignedExerciseRepository assignments;
     private final UserRepository users;
-    private final ContentCatalogue catalogue;
+    private final ExerciseLibrary exercises;
 
     public AssignmentService(AssignedExerciseRepository assignments,
                              UserRepository users,
-                             ContentCatalogue catalogue) {
+                             ExerciseLibrary exercises) {
         this.assignments = assignments;
         this.users = users;
-        this.catalogue = catalogue;
+        this.exercises = exercises;
     }
 
     /** The member's active prescriptions, in the order the coach set. */
@@ -47,7 +47,7 @@ public class AssignmentService {
         return active.stream()
                 .map(assignment -> AssignedExerciseResponse.of(
                         assignment,
-                        catalogue.exercise(assignment.getExerciseId()).orElse(null),
+                        exercises.find(assignment.getExerciseId()).orElse(null),
                         namesById.getOrDefault(assignment.getAssignedBy(), "Staff")))
                 .toList();
     }
@@ -58,7 +58,7 @@ public class AssignmentService {
                 .filter(candidate -> !candidate.isDeleted())
                 .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such client"));
 
-        Exercise exercise = catalogue.exercise(request.exerciseId())
+        Exercise exercise = exercises.find(request.exerciseId())
                 .orElseThrow(() -> ApiException.of(ErrorCode.EXERCISE_NOT_FOUND,
                         "No exercise with id " + request.exerciseId()));
 
