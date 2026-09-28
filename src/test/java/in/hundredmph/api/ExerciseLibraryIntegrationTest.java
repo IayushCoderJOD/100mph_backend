@@ -161,9 +161,25 @@ class ExerciseLibraryIntegrationTest {
 
         // 3. The browser PUTs it; the bucket now has it; the admin attaches it.
         when(media.head(eq(key))).thenReturn(Optional.of(new MediaStorage.StoredObject(key, 12_000_000L, "video/mp4")));
-        JsonNode filmed = send(patch("/v1/admin/exercises/" + id), admin, Map.of("video_key", key), 200);
+        String poster = "demos/uploads/copenhagen-plank-final-0000aaaa-poster.jpg";
+        when(media.head(eq(poster))).thenReturn(Optional.of(new MediaStorage.StoredObject(poster, 80_000L, "image/jpeg")));
+        JsonNode filmed = send(patch("/v1/admin/exercises/" + id), admin,
+                Map.of("video_key", key, "thumbnail_key", poster), 200);
         assertThat(filmed.get("video_url").asText()).isEqualTo(key);
+        assertThat(filmed.get("thumbnail_url").asText()).isEqualTo(poster);
         assertThat(getJson("/v1/exercises", admin).findValuesAsText("id")).contains(id);
+
+        // 3b. Replaced with a new take whose poster could not be captured: the
+        // new video goes in, the old poster comes out, and the words stay put.
+        String retake = "demos/uploads/copenhagen-plank-retake-1111bbbb.mp4";
+        when(media.head(eq(retake))).thenReturn(Optional.of(new MediaStorage.StoredObject(retake, 9_000_000L, "video/mp4")));
+        JsonNode replaced = send(patch("/v1/admin/exercises/" + id), admin,
+                Map.of("video_key", retake, "thumbnail_key", ""), 200);
+        assertThat(replaced.get("video_url").asText()).isEqualTo(retake);
+        assertThat(replaced.get("thumbnail_url").isNull()).isTrue();
+        assertThat(replaced.get("name").asText()).isEqualTo(created.get("name").asText());
+        assertThat(replaced.get("instructions").asText()).isEqualTo("Side plank with the top leg on a bench.");
+        key = retake;
 
         // 4. On a client's week, and the client sees it.
         String email = "library-" + System.nanoTime() + "@100mph.in";
@@ -178,7 +194,19 @@ class ExerciseLibraryIntegrationTest {
         assertThat(week.at("/days/monday/0/exercise/name").asText()).startsWith("Copenhagen Plank");
         assertThat(week.at("/days/monday/0/exercise/video_url").asText()).isEqualTo(key);
 
-        // 5. Retired: gone from the picker, still on the week that uses it.
+        // 5. Video removed: back to a draft, out of the picker, still on the week.
+        JsonNode unfilmed = send(patch("/v1/admin/exercises/" + id), admin, Map.of("video_key", ""), 200);
+        assertThat(unfilmed.get("video_url").isNull()).isTrue();
+        assertThat(unfilmed.get("thumbnail_url").isNull()).isTrue();
+        assertThat(getJson("/v1/exercises", admin).findValuesAsText("id")).doesNotContain(id);
+        JsonNode drafted = getJson("/v1/plan", token(email, "temp-password-1"));
+        assertThat(drafted.at("/days/monday/0/exercise/name").asText()).startsWith("Copenhagen Plank");
+        assertThat(drafted.at("/days/monday/0/exercise/video_url").isNull()).isTrue();
+        // …and filming it again puts it straight back.
+        send(patch("/v1/admin/exercises/" + id), admin, Map.of("video_key", key), 200);
+        assertThat(getJson("/v1/exercises", admin).findValuesAsText("id")).contains(id);
+
+        // 6. Retired: gone from the picker, still on the week that uses it.
         send(patch("/v1/admin/exercises/" + id), admin, Map.of("hidden", true), 200);
         assertThat(getJson("/v1/exercises", admin).findValuesAsText("id")).doesNotContain(id);
         assertThat(getJson("/v1/plan", token(email, "temp-password-1"))

@@ -201,7 +201,16 @@ public class ExerciseLibrary {
         // and really the kind of file it claims to be. A failed or abandoned
         // upload therefore can never leave a member with a broken player.
         if (request.videoKey() != null) {
-            doc.setVideoUrl(verifiedKey(request.videoKey(), "video/", media.properties().maxVideoBytes()));
+            if (request.videoKey().isBlank()) {
+                // Removing a video unlinks it and its poster; the movement goes
+                // back to being a draft. The file stays in the bucket — nothing
+                // is lost if it was a mistake, and a member mid-download is not
+                // cut off.
+                doc.setVideoUrl(null);
+                doc.setThumbnailUrl(null);
+            } else {
+                doc.setVideoUrl(verifiedKey(request.videoKey(), "video/", media.properties().maxVideoBytes()));
+            }
         }
         if (request.thumbnailKey() != null) {
             doc.setThumbnailUrl(request.thumbnailKey().isBlank()
