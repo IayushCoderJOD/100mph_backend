@@ -7,6 +7,7 @@ import in.hundredmph.api.content.model.LearnContent;
 import in.hundredmph.api.content.model.ProgramContent;
 import in.hundredmph.api.content.model.Routine;
 import in.hundredmph.api.domain.content.Program;
+import in.hundredmph.api.exercise.ExerciseLibrary;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,9 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContentController {
 
     private final ContentCatalogue catalogue;
+    private final ExerciseLibrary exercises;
 
-    public ContentController(ContentCatalogue catalogue) {
+    public ContentController(ContentCatalogue catalogue, ExerciseLibrary exercises) {
         this.catalogue = catalogue;
+        this.exercises = exercises;
     }
 
     /** Public — backs the program picker. */
@@ -50,7 +53,7 @@ public class ContentController {
         return new ProgramContent(
                 program,
                 catalogue.sessionTypesFor(programId),
-                catalogue.exercisesFor(programId),
+                exercises.publishedFor(programId),
                 catalogue.sessionExercisesForProgram(programId),
                 catalogue.signatureExercisesFor(programId),
                 catalogue.signatureExercisesFor(programId).stream()
@@ -74,10 +77,16 @@ public class ContentController {
                         "No routine with id " + routineId));
     }
 
-    /** One exercise, for the guide screen opened from a session or a plan. */
+    /** The published library — what a coach can prescribe. Filmed and not hidden. */
+    @GetMapping("/exercises")
+    public List<Exercise> exercises() {
+        return exercises.published();
+    }
+
+    /** One exercise, for the guide screen opened from a session or a plan — hidden ones too. */
     @GetMapping("/exercises/{exerciseId}")
     public Exercise exercise(@PathVariable String exerciseId) {
-        return catalogue.exercise(exerciseId)
+        return exercises.find(exerciseId)
                 .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND,
                         "No exercise with id " + exerciseId));
     }

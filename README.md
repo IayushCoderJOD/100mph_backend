@@ -47,6 +47,11 @@ Production runs the `prod` profile. Set, at minimum:
 | `MONGODB_URI` | Atlas, Mumbai region |
 | `CORS_ALLOWED_ORIGINS` | The web app's origin(s), e.g. `https://app.100mph.in`. Phone apps need none |
 | `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | Creates the first admin on an empty database (12+ characters). Existing accounts are never touched, so these can stay set |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Video uploads from the exercise library. An R2 API token with Object Read & Write on the one bucket. Blank = uploads off, everything else unaffected |
+
+The bucket also needs a CORS rule allowing `PUT` from the web app's origins
+with the `Content-Type` and `Cache-Control` headers — browsers upload to it
+directly.
 
 `DeploymentGuard` refuses to boot against any non-local database that still
 has a development default in force — the committed JWT key, demo seeding, or
@@ -83,6 +88,20 @@ Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
 | `GET` | `/admin/users` | Roster — backs `app/(tabs)/clients.tsx` |
 | `PATCH` | `/admin/users/{id}/status` | `{ status }` — active / invited / suspended; not your own |
 | `PUT` | `/admin/users/{id}/password` | `{ password }` — a new temporary password; ends every session. The recovery path until reset emails are wired |
+| `GET` | `/admin/exercises` | The whole exercise library, drafts and hidden included |
+| `POST` | `/admin/exercises` | `{ name, category, focus?, prerequisites?, instructions?, purpose?, suggested_sets? }` — a new movement, text first |
+| `PATCH` | `/admin/exercises/{id}` | Any of the above, `hidden`, and `video_key` / `thumbnail_key` to attach an uploaded file (checked against the bucket) |
+| `POST` | `/admin/exercises/uploads` | `{ kind: video\|poster, content_type, size_bytes, file_name }` → a one-time PUT URL straight to R2 |
+
+### Exercise library
+
+Exercises live in the `exercises` collection. `catalogue.json` (exported from the
+app's `mock.ts`) seeds it on every boot: new movements are added, and movements
+no admin has touched keep following the file, but anything an admin has edited
+belongs to the admin from then on. Nothing is deleted — plans store the id —
+only hidden. `GET /exercises` returns what the picker may offer: filmed and not
+hidden. Uploaded files go to `demos/uploads/` in the same bucket as the
+hand-encoded demos.
 
 ### Public
 

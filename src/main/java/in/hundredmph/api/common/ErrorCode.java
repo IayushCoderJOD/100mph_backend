@@ -46,6 +46,12 @@ public enum ErrorCode {
     NO_ACTIVE_PROGRAM("no_active_program", HttpStatus.UNPROCESSABLE_ENTITY),
     SESSION_TYPE_NOT_FOUND("session_type_not_found", HttpStatus.UNPROCESSABLE_ENTITY),
     EXERCISE_NOT_FOUND("exercise_not_found", HttpStatus.UNPROCESSABLE_ENTITY),
+    /** A file type or size the library does not take. */
+    UNSUPPORTED_MEDIA("unsupported_media", HttpStatus.UNPROCESSABLE_ENTITY),
+    /** Attaching a key the bucket has nothing under — the upload never finished. */
+    UPLOAD_NOT_FOUND("upload_not_found", HttpStatus.UNPROCESSABLE_ENTITY),
+    /** This server has no bucket credentials, so it cannot take uploads. */
+    MEDIA_NOT_CONFIGURED("media_not_configured", HttpStatus.SERVICE_UNAVAILABLE),
     /** Prescribing the same exercise to one client twice. */
     ALREADY_ASSIGNED("already_assigned", HttpStatus.CONFLICT),
 

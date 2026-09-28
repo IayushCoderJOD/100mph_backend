@@ -2,12 +2,12 @@ package in.hundredmph.api.session;
 
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
-import in.hundredmph.api.content.ContentCatalogue;
 import in.hundredmph.api.domain.schedule.DayOfWeek;
 import in.hundredmph.api.domain.session.SessionLog;
 import in.hundredmph.api.domain.session.SessionLogRepository;
 import in.hundredmph.api.domain.user.User;
 import in.hundredmph.api.domain.user.UserRepository;
+import in.hundredmph.api.exercise.ExerciseLibrary;
 import in.hundredmph.api.plan.PlanService;
 import in.hundredmph.api.session.dto.LogSessionRequest;
 import in.hundredmph.api.session.dto.SessionLogResponse;
@@ -29,16 +29,16 @@ public class SessionService {
 
     private final SessionLogRepository logs;
     private final UserRepository users;
-    private final ContentCatalogue catalogue;
+    private final ExerciseLibrary exercises;
     private final PlanService plans;
 
     public SessionService(SessionLogRepository logs,
                           UserRepository users,
-                          ContentCatalogue catalogue,
+                          ExerciseLibrary exercises,
                           PlanService plans) {
         this.logs = logs;
         this.users = users;
-        this.catalogue = catalogue;
+        this.exercises = exercises;
         this.plans = plans;
     }
 
@@ -54,7 +54,7 @@ public class SessionService {
         // A rest day — or no plan yet — is a valid answer, not an error.
         List<SessionPlanResponse.PlannedExercise> planned = new ArrayList<>();
         for (var line : plans.plannedOn(userId, DayOfWeek.of(day))) {
-            catalogue.exercise(line.exerciseId()).ifPresent(exercise ->
+            exercises.find(line.exerciseId()).ifPresent(exercise ->
                     planned.add(new SessionPlanResponse.PlannedExercise(exercise, line.prescription())));
         }
 

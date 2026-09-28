@@ -2,17 +2,17 @@ package in.hundredmph.api.plan;
 
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
-import in.hundredmph.api.content.ContentCatalogue;
-import in.hundredmph.api.domain.plan.WeeklyPlan;
 import in.hundredmph.api.domain.plan.WeeklyPlan.PlannedExercise;
+import in.hundredmph.api.domain.plan.WeeklyPlan;
 import in.hundredmph.api.domain.plan.WeeklyPlanRepository;
 import in.hundredmph.api.domain.schedule.DayOfWeek;
 import in.hundredmph.api.domain.user.User;
 import in.hundredmph.api.domain.user.UserRepository;
 import in.hundredmph.api.domain.user.UserRole;
+import in.hundredmph.api.exercise.ExerciseLibrary;
 import in.hundredmph.api.plan.dto.UpdatePlanRequest;
-import in.hundredmph.api.plan.dto.WeeklyPlanResponse;
 import in.hundredmph.api.plan.dto.WeeklyPlanResponse.PlannedExerciseResponse;
+import in.hundredmph.api.plan.dto.WeeklyPlanResponse;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -37,12 +37,12 @@ public class PlanService {
 
     private final WeeklyPlanRepository plans;
     private final UserRepository users;
-    private final ContentCatalogue catalogue;
+    private final ExerciseLibrary exercises;
 
-    public PlanService(WeeklyPlanRepository plans, UserRepository users, ContentCatalogue catalogue) {
+    public PlanService(WeeklyPlanRepository plans, UserRepository users, ExerciseLibrary exercises) {
         this.plans = plans;
         this.users = users;
-        this.catalogue = catalogue;
+        this.exercises = exercises;
     }
 
     public WeeklyPlanResponse forUser(String userId) {
@@ -111,7 +111,7 @@ public class PlanService {
             List<PlannedExercise> planned = new ArrayList<>(lines.size());
             for (UpdatePlanRequest.PlannedExerciseInput line : lines) {
                 String exerciseId = line.exerciseId().trim();
-                if (catalogue.exercise(exerciseId).isEmpty()) {
+                if (exercises.find(exerciseId).isEmpty()) {
                     throw new ApiException(ErrorCode.EXERCISE_NOT_FOUND,
                             "No exercise with id " + exerciseId, Map.of("day", day.wire()));
                 }
@@ -137,7 +137,7 @@ public class PlanService {
                             line.exerciseId(),
                             line.sortOrder(),
                             line.prescription(),
-                            catalogue.exercise(line.exerciseId()).orElse(null)))
+                            exercises.find(line.exerciseId()).orElse(null)))
                     .toList());
         }
 
