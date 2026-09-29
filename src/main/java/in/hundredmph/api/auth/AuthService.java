@@ -325,6 +325,16 @@ public class AuthService {
         return issueTokens(user, UUID.randomUUID().toString(), deviceId, now);
     }
 
+    /** Asks for the password again before something that cannot be undone. */
+    public void confirmPassword(String userId, String password) {
+        User user = users.findById(userId)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such user"));
+        if (!verifyPassword(password, user.getPasswordHash())) {
+            throw ApiException.of(ErrorCode.CURRENT_PASSWORD_INCORRECT, "That password is not right");
+        }
+    }
+
     public void assertPasswordStrongEnough(String password) {
         if (password == null || password.length() < authProperties.minPasswordLength()) {
             throw ApiException.of(ErrorCode.PASSWORD_TOO_WEAK,

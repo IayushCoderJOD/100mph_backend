@@ -54,6 +54,8 @@ public enum ErrorCode {
     MEDIA_NOT_CONFIGURED("media_not_configured", HttpStatus.SERVICE_UNAVAILABLE),
     /** Prescribing the same exercise to one client twice. */
     ALREADY_ASSIGNED("already_assigned", HttpStatus.CONFLICT),
+    /** Deleting the practice's only admin account would leave nobody able to run it. */
+    LAST_ADMIN("last_admin", HttpStatus.CONFLICT),
 
     TOO_MANY_ATTEMPTS("too_many_attempts", HttpStatus.TOO_MANY_REQUESTS),
 

@@ -1,5 +1,6 @@
 package in.hundredmph.api.admin;
 
+import in.hundredmph.api.account.AccountDeletion;
 import in.hundredmph.api.admin.dto.CreateUserRequest;
 import in.hundredmph.api.auth.AuthService;
 import in.hundredmph.api.common.ApiException;
@@ -30,15 +31,18 @@ public class AdminUserService {
     private final ContentCatalogue catalogue;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+    private final AccountDeletion accountDeletion;
 
     public AdminUserService(UserRepository users,
                             ContentCatalogue catalogue,
                             PasswordEncoder passwordEncoder,
-                            AuthService authService) {
+                            AuthService authService,
+                            AccountDeletion accountDeletion) {
         this.users = users;
         this.catalogue = catalogue;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
+        this.accountDeletion = accountDeletion;
     }
 
     public UserDto create(CreateUserRequest request) {
@@ -122,6 +126,14 @@ public class AdminUserService {
 
     public void setPassword(String userId, String password) {
         authService.setPassword(userId, password);
+    }
+
+    /** Deletes a client's account and all of their data. Your own goes from Settings, with your password. */
+    public void delete(String actorId, String userId) {
+        if (userId.equals(actorId)) {
+            throw ApiException.of(ErrorCode.FORBIDDEN, "Delete your own account from Settings");
+        }
+        accountDeletion.delete(userId);
     }
 
     private String resolveProgram(CreateUserRequest request) {

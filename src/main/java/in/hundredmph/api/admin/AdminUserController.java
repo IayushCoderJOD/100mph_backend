@@ -10,6 +10,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,6 +53,14 @@ public class AdminUserController {
                              @PathVariable String userId,
                              @Valid @RequestBody SetStatusRequest request) {
         return adminUserService.setStatus(principal.userId(), userId, request.status());
+    }
+
+    /** Deletes the account and all of its data, for good. Suspending is the reversible option. */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal AuthPrincipal principal,
+                                       @PathVariable String userId) {
+        adminUserService.delete(principal.userId(), userId);
+        return ResponseEntity.noContent().build();
     }
 
     /** The only way back in for a client who forgot their password: email reset is not wired yet. */
