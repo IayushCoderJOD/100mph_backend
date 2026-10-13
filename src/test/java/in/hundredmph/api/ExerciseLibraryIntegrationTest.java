@@ -215,6 +215,44 @@ class ExerciseLibraryIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("a video kept with its sound plays aloud, can be muted and unmuted; a silent one cannot be unmuted")
+    void soundFollowsTheVideo() throws Exception {
+        String admin = token(ADMIN_EMAIL, ADMIN_PASSWORD);
+        String id = send(post("/v1/admin/exercises"), admin, Map.of(
+                "name", "Talking Bridge " + System.nanoTime(), "category", "hips_glutes"), 201).get("id").asText();
+        createdExercises.add(id);
+        String voiced = "demos/uploads/talking-bridge-2222cccc.mp4";
+        String silent = "demos/uploads/talking-bridge-3333dddd.mp4";
+        for (String key : List.of(voiced, silent)) {
+            when(media.head(eq(key))).thenReturn(Optional.of(new MediaStorage.StoredObject(key, 5_000_000L, "video/mp4")));
+        }
+
+        // Uploaded with its sound kept: members hear it.
+        JsonNode loud = send(patch("/v1/admin/exercises/" + id), admin,
+                Map.of("video_key", voiced, "video_has_sound", true, "sound_on", true), 200);
+        assertThat(loud.get("video_has_sound").asBoolean()).isTrue();
+        assertThat(loud.get("sound_on").asBoolean()).isTrue();
+        assertThat(getJson("/v1/exercises/" + id, token(MEMBER_EMAIL, MEMBER_PASSWORD))
+                .get("sound_on").asBoolean()).isTrue();
+
+        // Muted and unmuted again, without touching the file.
+        assertThat(send(patch("/v1/admin/exercises/" + id), admin, Map.of("sound_on", false), 200)
+                .get("sound_on").asBoolean()).isFalse();
+        JsonNode unmuted = send(patch("/v1/admin/exercises/" + id), admin, Map.of("sound_on", true), 200);
+        assertThat(unmuted.get("sound_on").asBoolean()).isTrue();
+        assertThat(unmuted.get("video_url").asText()).isEqualTo(voiced);
+
+        // Replaced by a client that says nothing about sound: silent, and muted.
+        JsonNode replaced = send(patch("/v1/admin/exercises/" + id), admin, Map.of("video_key", silent), 200);
+        assertThat(replaced.get("video_has_sound").asBoolean()).isFalse();
+        assertThat(replaced.get("sound_on").asBoolean()).isFalse();
+
+        // Nothing to unmute.
+        send(patch("/v1/admin/exercises/" + id), admin, Map.of("sound_on", true), 400);
+        assertThat(library.find(id).orElseThrow().soundOn()).isFalse();
+    }
+
     // ------------------------------------------------------------ refusals
 
     @Test

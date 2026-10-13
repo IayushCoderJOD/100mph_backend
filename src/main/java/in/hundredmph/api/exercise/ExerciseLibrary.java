@@ -208,9 +208,20 @@ public class ExerciseLibrary {
                 // cut off.
                 doc.setVideoUrl(null);
                 doc.setThumbnailUrl(null);
+                doc.setVideoHasSound(false);
             } else {
                 doc.setVideoUrl(verifiedKey(request.videoKey(), "video/", media.properties().maxVideoBytes()));
+                doc.setVideoHasSound(Boolean.TRUE.equals(request.videoHasSound()));
             }
+            // Sound belongs to the file it was chosen for, so a new file starts muted.
+            doc.setSoundOn(false);
+        }
+        if (request.soundOn() != null) {
+            if (request.soundOn() && !doc.isVideoHasSound()) {
+                throw ApiException.of(ErrorCode.VALIDATION_FAILED,
+                        "This video has no sound. Replace it with one uploaded with sound on");
+            }
+            doc.setSoundOn(request.soundOn());
         }
         if (request.thumbnailKey() != null) {
             doc.setThumbnailUrl(request.thumbnailKey().isBlank()

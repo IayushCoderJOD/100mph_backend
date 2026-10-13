@@ -56,6 +56,14 @@ public class ExerciseDocument {
 
     private boolean hidden;
 
+    /** The video file has a sound track — set when a video is attached. */
+    @Field("video_has_sound")
+    private boolean videoHasSound;
+
+    /** Members hear the video; off plays it muted. */
+    @Field("sound_on")
+    private boolean soundOn;
+
     /** catalogue | admin — who first wrote it. */
     private String origin;
 
@@ -94,6 +102,8 @@ public class ExerciseDocument {
         purpose = exercise.purpose();
         suggestedSets = exercise.suggestedSets();
         hidden = exercise.hidden();
+        videoHasSound = exercise.videoHasSound();
+        soundOn = exercise.soundOn();
         updatedAt = now;
     }
 
@@ -104,7 +114,7 @@ public class ExerciseDocument {
 
     public Exercise toExercise() {
         return new Exercise(id, programId, name, category, focus, videoUrl, thumbnailUrl,
-                prerequisites, instructions, purpose, suggestedSets, hidden);
+                prerequisites, instructions, purpose, suggestedSets, hidden, videoHasSound, soundOn);
     }
 
     /** Marks the admin as the owner from now on, so the catalogue stops overwriting it. */
@@ -149,6 +159,12 @@ public class ExerciseDocument {
 
     public boolean isHidden() { return hidden; }
     public void setHidden(boolean hidden) { this.hidden = hidden; }
+
+    public boolean isVideoHasSound() { return videoHasSound; }
+    public void setVideoHasSound(boolean videoHasSound) { this.videoHasSound = videoHasSound; }
+
+    public boolean isSoundOn() { return soundOn; }
+    public void setSoundOn(boolean soundOn) { this.soundOn = soundOn; }
 
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }

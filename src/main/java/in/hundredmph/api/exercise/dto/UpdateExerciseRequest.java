@@ -7,6 +7,9 @@ import jakarta.validation.constraints.Size;
  * alone. {@code videoKey} and {@code thumbnailKey} attach a file that has
  * already been uploaded — the server checks the bucket before accepting it.
  * A blank {@code videoKey} removes the video and its poster.
+ *
+ * <p>A new video starts muted unless the same request turns {@code soundOn}
+ * on, so a client that knows nothing about sound never makes one audible.
  */
 public record UpdateExerciseRequest(
         @Size(max = 80) String name,
@@ -20,5 +23,9 @@ public record UpdateExerciseRequest(
         /** Blank removes the video (and its poster); the movement becomes a draft. */
         @Size(max = 300) String videoKey,
         /** Blank removes the poster. */
-        @Size(max = 300) String thumbnailKey) {
+        @Size(max = 300) String thumbnailKey,
+        /** Sent with {@code videoKey}: the new file has a sound track. Ignored without one. */
+        Boolean videoHasSound,
+        /** Members hear the video. Can only be turned on for a video that has sound. */
+        Boolean soundOn) {
 }

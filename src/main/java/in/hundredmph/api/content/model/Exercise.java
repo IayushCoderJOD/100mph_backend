@@ -28,7 +28,14 @@ public record Exercise(
         /** The sets a coach starts from when adding it to a day, e.g. "3 x 12 reps". */
         String suggestedSets,
         /** Out of the picker. Still resolves on plans that already use it. */
-        boolean hidden) {
+        boolean hidden,
+        /**
+         * The video file has a sound track. The bundled demos never do; an
+         * admin's upload keeps one only when they ask for it.
+         */
+        boolean videoHasSound,
+        /** Members hear the video. Off plays it muted, even when the file has sound. */
+        boolean soundOn) {
 
     /** Offered in the picker: filmed, and not retired. Derived, so not on the wire. */
     @JsonIgnore
