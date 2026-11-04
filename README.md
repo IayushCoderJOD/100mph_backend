@@ -77,6 +77,7 @@ Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
 |---|---|---|
 | `GET` | `/me` | The boot call — user, subscription, entitlement, flags |
 | `PATCH` | `/me` | `{ full_name?, phone?, timezone?, avatar_url?, date_of_birth?, height_cm?, weight_kg? }` — blank `phone` clears it |
+| `PUT` | `/me/profile` | `{ full_name, phone?, date_of_birth?, height_cm?, weight_kg? }` — the Edit Details form, saved whole: a null or blank optional field clears it |
 | `PUT` | `/me/password` | `{ current_password, new_password }` — ends other sessions, returns a fresh pair |
 | `PUT` | `/me/program` | `{ program_id }` |
 
@@ -86,6 +87,7 @@ Base `/v1`. JSON only, `Authorization: Bearer <access_token>` unless noted.
 |---|---|---|
 | `POST` | `/admin/users` | Provision a client — backs `app/admin/create-user.tsx` |
 | `GET` | `/admin/users` | Roster — backs `app/(tabs)/clients.tsx` |
+| `PUT` | `/admin/users/{id}` | `{ full_name, email, phone?, date_of_birth?, height_cm?, weight_kg? }` — correct a client's details, saved whole. A staff account keeps its email |
 | `PATCH` | `/admin/users/{id}/status` | `{ status }` — active / invited / suspended; not your own |
 | `PUT` | `/admin/users/{id}/password` | `{ password }` — a new temporary password; ends every session. The recovery path until reset emails are wired |
 | `GET` | `/admin/exercises` | The whole exercise library, drafts and hidden included |

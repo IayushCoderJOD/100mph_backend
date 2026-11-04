@@ -46,7 +46,7 @@ public class User {
     private String activeProgramId;
 
     /**
-     * Filled in by the member from Settings, and health data under the DPDP
+     * Filled in by the member from Settings or by their coach, and health data under the DPDP
      * Act like the pain log: never logged, and part of the export/delete path
      * when that is built.
      */

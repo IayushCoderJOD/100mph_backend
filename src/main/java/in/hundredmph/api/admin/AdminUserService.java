@@ -1,7 +1,9 @@
 package in.hundredmph.api.admin;
 
 import in.hundredmph.api.account.AccountDeletion;
+import in.hundredmph.api.account.ProfileEditor;
 import in.hundredmph.api.admin.dto.CreateUserRequest;
+import in.hundredmph.api.admin.dto.UpdateUserRequest;
 import in.hundredmph.api.auth.AuthService;
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
@@ -32,17 +34,20 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
     private final AccountDeletion accountDeletion;
+    private final ProfileEditor profiles;
 
     public AdminUserService(UserRepository users,
                             ContentCatalogue catalogue,
                             PasswordEncoder passwordEncoder,
                             AuthService authService,
-                            AccountDeletion accountDeletion) {
+                            AccountDeletion accountDeletion,
+                            ProfileEditor profiles) {
         this.users = users;
         this.catalogue = catalogue;
         this.passwordEncoder = passwordEncoder;
         this.authService = authService;
         this.accountDeletion = accountDeletion;
+        this.profiles = profiles;
     }
 
     public UserDto create(CreateUserRequest request) {
@@ -99,6 +104,31 @@ public class AdminUserService {
                 .sorted(Comparator.comparing(User::getFullName, Comparator.nullsLast(String::compareTo)))
                 .map(UserDto::from)
                 .toList();
+    }
+
+    /** Corrects a client's details. Sessions carry on: they are tied to the id, not the email. */
+    public UserDto update(String userId, UpdateUserRequest request) {
+        User user = users.findById(userId)
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> ApiException.of(ErrorCode.NOT_FOUND, "No such user"));
+
+        String email = AuthService.normaliseEmail(request.email());
+        if (!email.equals(user.getEmail())) {
+            // AdminBootstrap finds the first admin by this address on every
+            // boot: move it and the next deploy quietly creates a second admin.
+            if (user.getRole() == UserRole.ADMIN) {
+                throw ApiException.of(ErrorCode.FORBIDDEN, "A staff account keeps the email it was created with");
+            }
+            if (users.existsByEmail(email)) {
+                throw ProfileEditor.emailTaken();
+            }
+            user.setEmail(email);
+        }
+
+        profiles.apply(user, request.fullName(), request.phone(),
+                request.dateOfBirth(), request.heightCm(), request.weightKg());
+        profiles.save(user);
+        return UserDto.from(user);
     }
 
     public UserDto setStatus(String actorId, String userId, UserStatus status) {
