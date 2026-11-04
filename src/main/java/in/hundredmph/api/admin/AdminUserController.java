@@ -3,6 +3,7 @@ package in.hundredmph.api.admin;
 import in.hundredmph.api.admin.dto.CreateUserRequest;
 import in.hundredmph.api.admin.dto.SetPasswordRequest;
 import in.hundredmph.api.admin.dto.SetStatusRequest;
+import in.hundredmph.api.admin.dto.UpdateUserRequest;
 import in.hundredmph.api.me.dto.UserDto;
 import in.hundredmph.api.security.AuthPrincipal;
 import jakarta.validation.Valid;
@@ -46,6 +47,12 @@ public class AdminUserController {
     @GetMapping
     public List<UserDto> roster() {
         return adminUserService.roster();
+    }
+
+    /** Backs app/admin/edit/[id].tsx. The whole form: a null or blank optional field clears it. */
+    @PutMapping("/{userId}")
+    public UserDto update(@PathVariable String userId, @Valid @RequestBody UpdateUserRequest request) {
+        return adminUserService.update(userId, request);
     }
 
     @PatchMapping("/{userId}/status")

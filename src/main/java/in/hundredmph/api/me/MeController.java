@@ -8,6 +8,7 @@ import in.hundredmph.api.me.dto.DeleteAccountRequest;
 import in.hundredmph.api.me.dto.MeResponse;
 import in.hundredmph.api.me.dto.SetProgramRequest;
 import in.hundredmph.api.me.dto.UpdateMeRequest;
+import in.hundredmph.api.me.dto.UpdateProfileRequest;
 import in.hundredmph.api.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +46,13 @@ public class MeController {
     public MeResponse update(@AuthenticationPrincipal AuthPrincipal principal,
                               @Valid @RequestBody UpdateMeRequest request) {
         return meService.update(principal.userId(), request);
+    }
+
+    /** The Edit Details form, saved whole: a null clears the field, which PATCH cannot do. */
+    @PutMapping("/profile")
+    public MeResponse saveProfile(@AuthenticationPrincipal AuthPrincipal principal,
+                                  @Valid @RequestBody UpdateProfileRequest request) {
+        return meService.saveProfile(principal.userId(), request);
     }
 
     @PutMapping("/program")

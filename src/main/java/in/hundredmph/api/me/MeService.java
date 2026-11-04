@@ -1,5 +1,6 @@
 package in.hundredmph.api.me;
 
+import in.hundredmph.api.account.ProfileEditor;
 import in.hundredmph.api.common.ApiException;
 import in.hundredmph.api.common.ErrorCode;
 import in.hundredmph.api.common.Phones;
@@ -15,6 +16,7 @@ import in.hundredmph.api.me.dto.FlagsDto;
 import in.hundredmph.api.me.dto.MeResponse;
 import in.hundredmph.api.me.dto.SubscriptionDto;
 import in.hundredmph.api.me.dto.UpdateMeRequest;
+import in.hundredmph.api.me.dto.UpdateProfileRequest;
 import in.hundredmph.api.me.dto.UserDto;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,13 +34,16 @@ public class MeService {
     private final UserRepository users;
     private final SubscriptionRepository subscriptions;
     private final ContentCatalogue catalogue;
+    private final ProfileEditor profiles;
 
     public MeService(UserRepository users,
                      SubscriptionRepository subscriptions,
-                     ContentCatalogue catalogue) {
+                     ContentCatalogue catalogue,
+                     ProfileEditor profiles) {
         this.users = users;
         this.subscriptions = subscriptions;
         this.catalogue = catalogue;
+        this.profiles = profiles;
     }
 
     public MeResponse boot(String userId) {
@@ -93,6 +98,15 @@ public class MeService {
             throw ApiException.of(ErrorCode.PHONE_ALREADY_EXISTS, "An account with that phone number already exists");
         }
 
+        return boot(userId);
+    }
+
+    /** PUT /v1/me/profile — the Edit Details form, saved whole. */
+    public MeResponse saveProfile(String userId, UpdateProfileRequest request) {
+        User user = requireUser(userId);
+        profiles.apply(user, request.fullName(), request.phone(),
+                request.dateOfBirth(), request.heightCm(), request.weightKg());
+        profiles.save(user);
         return boot(userId);
     }
 
